@@ -1,0 +1,5 @@
+bootstrap_servers = ["127.0.0.1:9092"]
+# path to file csv data
+csv_sim_path = "graveyard/test.csv"
+# path to csv feature file
+csv_header_path = "graveyard/NUSW-NB15_features.csv"

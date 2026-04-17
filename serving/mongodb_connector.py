@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 
-client = MongoClient("mongodb+srv://admin:bigdata2025@cluster0.lsq1xwd.mongodb.net/?appName=Cluster0")
+client = MongoClient("mongodb://localhost:27017/")
 
 db = client["intrusion_detection"]
 collection = db["alerts"]

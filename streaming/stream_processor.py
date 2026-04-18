@@ -30,14 +30,11 @@ print("✅ SparkSession created!")
 # ─── 2. Schema của 1 record UNSW-NB15 ─────────────────────────────────────
 # (Chỉ lấy các field cơ bản để test, sau này mở rộng)
 
-traffic_schema = StructType([
-    StructField("srcip",      StringType(),  True),
-    StructField("dstip",      StringType(),  True),
-    StructField("proto",      StringType(),  True),
-    StructField("attack_cat", StringType(),  True),
-    StructField("Label",      IntegerType(), True),
-    StructField("Stime",  StringType(),  True),  # parse sau
-])
+traffic_schema = spark.read \
+    .option("header", True) \
+    .option("inferSchema", True) \
+    .csv("data/raw/UNSW-NB15.csv") \
+    .schema
 
 # ─── 3. Đọc stream từ Kafka ────────────────────────────────────────────────
 

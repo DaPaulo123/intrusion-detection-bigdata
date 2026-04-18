@@ -8,6 +8,51 @@ happen — detecting threats within seconds of occurrence. The system
 is designed to be scalable and extensible for future network 
 security use cases.
 
+---
+
+## 2. Architecture — Lambda
+
+```
+┌─────────────────────────────────────────────┐
+│              DATA SOURCES                    │
+│  UNSW-NB15 + CIC-IDS-2017 + IP Geolocation  │
+└──────────────────┬──────────────────────────┘
+                   ↓
+┌─────────────────────────────────────────────┐
+│           INGESTION LAYER                    │
+│  Apache Kafka Topics:                        │
+│  → network_traffic (raw packets)             │
+│  → alerts (detected attacks)                 │
+│  → metrics (system statistics)               │
+└──────────┬──────────────────────────────────┘
+           ↓
+┌──────────────────┐    ┌───────────────────────┐
+│   SPEED LAYER    │    │      BATCH LAYER        │
+│ Spark Streaming  │    │  HDFS stores all data   │
+│ → classify each  │    │  Spark batch jobs:      │
+│   packet in      │    │  → daily retraining     │
+│   real-time      │    │  → pattern analysis     │
+│ → window counts  │    │  → feature engineering  │
+│ → Redis cache    │    │  → GraphFrames analysis │
+└──────────┬───────┘    └──────────┬────────────┘
+           └──────────┬────────────┘
+                      ↓
+┌─────────────────────────────────────────────┐
+│           SERVING LAYER                      │
+│  MongoDB → store alerts + statistics         │
+│  REST API → expose predictions               │
+│  Dashboard → real-time visualization         │
+└─────────────────────────────────────────────┘
+                      ↓
+┌─────────────────────────────────────────────┐
+│           ORCHESTRATION                      │
+│  Kubernetes → manage all services            │
+│  Docker → containerize each component        │
+└─────────────────────────────────────────────┘
+```
+
+---
+
 ## Setup & Installation
 
 ### Prerequisites
@@ -73,8 +118,8 @@ Open browser at http://localhost:5000/alerts
 
 | Person | Role | Responsibilities |
 |--------|------|-----------------|
-| A | Data Ingestion | Replay UNSW-NB15 dataset through Kafka, define message schemas |
-| B | Batch Processing | Preprocess raw data, engineer features, analyze historical patterns |
-| C | Stream Processing | Classify network packets in real-time using Spark Structured Streaming |
-| D | ML + Analytics | Train and evaluate intrusion detection model, optimize accuracy |
-| E | Serving + Deploy | REST API, MongoDB storage, dashboard, Docker deployment |
+| Nguyễn Đức Thắng | Data Ingestion | Replay UNSW-NB15 dataset through Kafka, define message schemas |
+| Ngô Đức Anh Thông | Batch Processing | Preprocess raw data, engineer features, analyze historical patterns |
+| Nguyễn Hoàng Phúc | Stream Processing | Classify network packets in real-time using Spark Structured Streaming |
+| Nguyễn Quang Huy | ML + Analytics | Train and evaluate intrusion detection model, optimize accuracy |
+| Hồ Phúc Giáp | Serving + Deploy | REST API, MongoDB storage, dashboard, Docker deployment |

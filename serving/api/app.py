@@ -1,9 +1,11 @@
 from flask import Flask, jsonify
 from pymongo import MongoClient
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 app = Flask(__name__)
+client = MongoClient(os.environ.get("MONGO_URI"))
 
-client = MongoClient("mongodb://localhost:27017/")
 db = client["intrusion_detection"]
 collection = db["alerts"]
 

@@ -1,6 +1,3 @@
-# Python impl
-.venv
-
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -42,5 +39,4 @@ build/
 .DS_Store
 
 # Other things goes here
-graveyard
-log_*.txt
+graveyard/*

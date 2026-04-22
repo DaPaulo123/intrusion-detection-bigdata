@@ -24,8 +24,10 @@ producer = KafkaProducer(
     value_serializer=lambda x: json.dumps(x).encode("utf-8"),
 )
 
+print(f"Streaming {len(df)} packets...")
 for _, row in df.iterrows():
     producer.send("network_traffic", value=row.to_json())
     time.sleep(0.01)
 
 producer.flush()
+print("Stream complete!")

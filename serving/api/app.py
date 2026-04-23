@@ -11,7 +11,12 @@ collection = db["alerts"]
 
 @app.route("/alerts", methods=["GET"])
 def get_alerts():
-    alerts = list(collection.find({}, {"_id": 0}))
+    alerts = list(collection.find({}, {"_id": 0}).sort('timestamp', -1))
+    return jsonify(alerts)
+
+@app.route("/alerts/<attack_cat>", methods=["GET"]) 
+def get_alerts_by_type(attack_cat):
+    alerts = list(collection.find({"attack_cat": attack_cat}, {"_id": 0}).sort('timestamp', -1))
     return jsonify(alerts)
 
 @app.route("/health", methods=["GET"])

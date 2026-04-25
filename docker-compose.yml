@@ -1,15 +1,17 @@
-version: '3.8'
 
+version: '3'
 services:
   
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
   
   kafka:
     image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
     depends_on: [zookeeper]
     ports:
       - "9092:9092"
@@ -19,24 +21,31 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
   
   spark-master:
     image: apache/spark:3.4.1
+    container_name: spark-master
     ports:
       - "8080:8080"
       - "7077:7077"
-    command: bin/spark-class org.apache.spark.deploy.master.Master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     
   spark-worker:
     image: apache/spark:3.4.1
+    container_name: spark-worker
     depends_on: [spark-master]
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
       SPARK_WORKER_MEMORY: 2G
   
   hadoop:
     image: apache/hadoop:3
+    container_name: hadoop
     ports:
       - "9870:9870"
       - "8020:8020"
@@ -48,6 +57,7 @@ services:
   
   redis:
     image: redis:7
+    container_name: redis
     ports:
       - "6379:6379"
   
@@ -58,3 +68,9 @@ services:
     volumes:
       - ./notebooks:/home/jovyan/notebooks
       - ./data:/home/jovyan/data
+      - ./notebooks:/home/jovyan/notebooks
+      - ./data:/home/jovyan/data
+
+volumes:
+  mongo_data:
+```

@@ -6,11 +6,12 @@ db = client["intrusion_detection"]
 collection = db["alerts"]
 
 fake_alert = {
-    "srcip": "192.168.1.105",
-    "dstip": "10.0.0.1",
-    "attack_cat": "DoS",
-    "confidence": 0.94,
-    "timestamp": "2024-01-15T10:23:01"
+    "srcip": "192.118.1.145",
+    "dstip": "10.0.23.1",
+    "attack_cat": "SuperMan",
+    "confidence": 0.96,
+    "timestamp": "2026-01-15T10:23:01",
+    "status": "Unverified"
 }
 
 result = collection.insert_one(fake_alert)

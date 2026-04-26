@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>UI for testing</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        div {
+            background-color: #16213e;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid red;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="realtime-banner">
+        <h1> Network Threat Detection </h1>
+        <p id="last-updated"></p>
+    </div>
+    <div id='recent-alerts-summary'>
+        Recent alerts table + attack summary
+    </div>
+    <div id='attacktype-breakdown'>
+        attack type breakdown
+    </div>
+    <script>
+        function fetchAlerts() {
+            fetch("http://localhost:5000/alerts", {
+                headers: {
+                    "X-API-Key": "bigdata2024secret"
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    let html = ""
+                    data.forEach(alert => {
+                        html = html + "<div>"
+                        html = html + "Type of attack: " + alert.attack_cat + "<br>"
+                        html = html + "Confidence: " + alert.confidence + "<br>"
+                        html = html + "Source: " + alert.srcip + "<br>"
+                        html = html + "Time of detection: " + alert.timestamp + "<br>"
+                        html = html + "</div>" + "<br>"
+                    });
+                    document.getElementById("recent-alerts-summary").innerHTML = html
+                    document.getElementById("last-updated").innerHTML = "Last updated: " + new Date().toLocaleTimeString()
+                })
+        }
+        fetchAlerts()
+        setInterval(fetchAlerts, 5000)
+    </script>
+</body>
+
+</html>

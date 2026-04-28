@@ -3,6 +3,8 @@ from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 from flask import request, abort
+from flask import send_from_directory
+from bson import ObjectId
 load_dotenv()
 app = Flask(__name__)
 client = MongoClient(os.environ.get("MONGO_URI"))
@@ -35,10 +37,17 @@ def get_alerts_by_type(attack_cat):
 def health():
     return jsonify({"status": "running"})
 
-from flask import send_from_directory
-
 @app.route("/dashboard")
 def dashboard():
     return send_from_directory("../dashboard", "index.html")
+
+@app.route("/alerts/<alert_id>/status", methods=["PUT"])
+def update(alert_id):
+    stat = request.json.get("status")
+    collection.update_one({"_id": ObjectId(alert_id)}, {"$set": {"status": stat}})
+    return "Done"
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
+
+

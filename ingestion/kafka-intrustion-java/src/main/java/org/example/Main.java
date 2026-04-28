@@ -4,9 +4,8 @@ import java.io.IOException;
 import java.lang.Thread;
 import static java.lang.IO.println;
 
-public class Main {
+public final class Main {
     static void main() throws IOException {
-        NetworkTrafficProducer.main();
-        NetworkTrafficConsumer.main();
+        NetworkTrafficProducer.test();
     }
 }

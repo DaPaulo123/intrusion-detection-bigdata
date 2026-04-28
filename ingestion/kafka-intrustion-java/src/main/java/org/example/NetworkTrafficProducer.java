@@ -24,15 +24,15 @@ import java.util.Properties;
 import static java.lang.IO.println;
 
 final class NetworkTrafficProducer extends Thread {
-    static final Config config = Addons.get_config();
+    static final Settings SETTINGS = Addons.get_config();
 
     static List<String> simulation() throws IOException {
-        final Path csv_feature_file = Path.of(config.csv_header_path());
+        final Path csv_feature_file = Path.of(SETTINGS.simulation().csv_header_path());
         final CSVFormat csvFormat = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).get();
         final CSVParser headers_parser = CSVParser.parse(csv_feature_file, StandardCharsets.UTF_8, csvFormat);
         final String[] headers = headers_parser.stream().map(t -> t.get("Name")).toArray(String[]::new);
 
-        final Path csv_data_file = Path.of(config.csv_sim_path());
+        final Path csv_data_file = Path.of(SETTINGS.simulation().csv_sim_path());
         final CSVFormat data_format = CSVFormat.DEFAULT.builder().setHeader(headers).get();
         final CSVParser data_simulation = CSVParser.parse(csv_data_file, StandardCharsets.UTF_8, data_format);
 
@@ -51,16 +51,14 @@ final class NetworkTrafficProducer extends Thread {
     static void main() {
         final Properties props = new Properties();
         // Hardcode here, may put in config file later
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.bootstrap_servers());
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, SETTINGS.kafka().bootstrap_servers());
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         // Oops, all String
-        props.put(ProducerConfig.RETRIES_CONFIG, config.kafka_config().retries());
+        props.put(ProducerConfig.RETRIES_CONFIG, SETTINGS.kafka().retries());
 
         final Producer<String, String> producer = new KafkaProducer<>(props);
         try {
-            // producer.initTransactions();
-            // producer.beginTransaction();
             List<String> data = simulation();
             for (String s : data) {
                 producer.send(new ProducerRecord<>("network_traffic", s, s));

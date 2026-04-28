@@ -1,11 +1,11 @@
 import json
 import time
-
+import os
 import pandas as pd
 import tomllib
 from kafka import KafkaProducer
 
-with open("config.toml", mode="rb") as f:
+with open("settings.toml", mode="rb") as f:
     config = tomllib.load(f)
 
 col_info = pd.read_csv(config["simulation"]["csv_header_path"], encoding="cp1252")
@@ -18,9 +18,14 @@ df = pd.read_csv(
 )
 df = df.sort_values("Stime")
 
+
 # So far nothing yet
 producer = KafkaProducer(
-    bootstrap_servers=config["bootstrap_servers"],
+    bootstrap_servers=os.environ.get(
+        "KAFKA_BOOTSTRAP_SERVERS", config["kafka"]["bootstrap_servers"]
+    ),
+    retries=config["kafka"]["retries"],
+    acks=config["kafka"]["acks"],
     value_serializer=lambda x: json.dumps(x).encode("utf-8"),
 )
 

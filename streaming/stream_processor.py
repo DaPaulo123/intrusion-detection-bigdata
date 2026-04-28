@@ -88,8 +88,8 @@ stream_query = (
 
 print("🚀 Streaming query started! Waiting for data from Kafka...")
 print("   Topic: network_traffic")
-print("   Output: console (mỗi 5 giây hiện 1 batch)")
-print("   Nhấn Ctrl+C để dừng.\n")
+print("   Output: console (1 batch/ 5s)")
+print("   Press Ctrl+C to stop.\n")
 import signal
 
 def shutdown_handler(signum, frame):

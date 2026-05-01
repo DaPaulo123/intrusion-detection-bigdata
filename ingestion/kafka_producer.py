@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import tomllib
 from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
 
 with open("settings.toml", mode="rb") as f:
     config = tomllib.load(f)
@@ -36,3 +37,4 @@ for _, row in df.iterrows():
 
 producer.flush()
 print("Stream complete!")
+

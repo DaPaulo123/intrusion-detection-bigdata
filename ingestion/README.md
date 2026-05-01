@@ -1,42 +1,26 @@
-# Ingestion module setup
 
-This module handles ingesting data into the pipeline using Kafka.
+# Data ingestion layer
 
-## How to run Kafka locally
+Notes: Will likely to change in the future. Make sure to remove then setup again when happens.
 
-1. Make sure you have Docker and Docker Compose installed.
-2. In the root directory `intrusion-detection-bigdata`, start the Kafka cluster (Zookeeper & Kafka):
+## Data ingestion producer and consumer
 
-```bash
-docker-compose up -d
-```
+Current status: In progress
 
-3. To check if the containers are running properly, use:
+### Structure
 
-```bash
-docker-compose ps
-```
+- Java implementation is supported in `kafka_intrusion_java` project
+<!-- because Java has better support for this kind of thing -->
+- Python implementation is supported in 2 files `kafka_consumer.py` and `kafka_producer.py`
+- Shared config files in `settings.toml` file (please open and change in there to appropriate path of your files)
 
-## How to send test data
+### Issues
 
-To send 5 test JSON packets to Kafka:
+- Too barebone, will restructure in the future
+- Some escape characters appear when running Python producer to Java consumer.
+- Maybe use settings file instead of `.env`
 
-1. Install the Python dependencies (ensure you have a virtual environment set up if preferred):
+## Insights
 
-```bash
-pip install -r requirements.txt
-```
+- Java has weird ways to do such simple thing (construct new Record from existing Record)
 
-2. Run the `kafka_producer.py` script:
-
-```bash
-cd ingestion
-python kafka_producer.py
-```
-
-This will connect to the local Kafka broker (`localhost:9092`), wait until it is available, send 5 JSON packets to the `test-topic`, and then exit.
-
-## View Data in Kafka
-You can use a GUI tool like Offset Explorer to view the real-time messages residing inside Kafka topics:
-
-![Offset Explorer Data View](../docs/images/kafka_explorer_test.png)

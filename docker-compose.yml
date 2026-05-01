@@ -1,13 +1,15 @@
+
 version: '3'
 services:
-  
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-  
+    ports:
+      - "2181:2181"
+
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
@@ -51,6 +53,7 @@ services:
   
   mongodb:
     image: mongo:6
+    container_name: mongodb
     ports:
       - "27017:27017"
   
@@ -67,8 +70,7 @@ services:
     volumes:
       - ./notebooks:/home/jovyan/notebooks
       - ./data:/home/jovyan/data
-      - ./notebooks:/home/jovyan/notebooks
-      - ./data:/home/jovyan/data
 
 volumes:
   mongo_data:
+

@@ -94,7 +94,8 @@ parsed_stream = (
     .select(col("value").cast("string").alias("raw_json"))
     .select(from_json(col("raw_json"), traffic_schema).alias("data"))
     .select("data.*")
-    .withColumn("event_time", from_unixtime(col("Stime").cast("long")).cast("timestamp"))
+    .withColumn("event_time", from_unixtime(col("Stime").cast("double").cast("long")).cast("timestamp"))
+    .filter(col("event_time").isNotNull())
 )
 # ─── Các DataFrame cho từng mode ──────────────────────────────────────────
  

@@ -40,12 +40,24 @@ services:
     environment:
       SPARK_WORKER_MEMORY: 2G
   
-  hadoop:
-    image: apache/hadoop:3
-    container_name: hadoop
-    ports:
-      - "9870:9870"
-      - "8020:8020"
+  namenode:
+      image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+      container_name: namenode
+      environment:
+        - CLUSTER_NAME=intrusion-detection
+      env_file:
+        - ./hadoop.env
+      ports:
+        - "9870:9870"
+        - "8020:8020"
+
+  datanode:
+      image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+      container_name: datanode
+      depends_on:
+        - namenode
+      env_file:
+        - ./hadoop.env
   
   mongodb:
     image: mongo:6

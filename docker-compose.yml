@@ -35,6 +35,8 @@ services:
   spark-worker:
     image: apache/spark:3.4.1
     container_name: spark-worker
+    ports:
+      - "8081:8081"
     depends_on: [spark-master]
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
@@ -54,11 +56,24 @@ services:
   datanode:
       image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
       container_name: datanode
+      ports:
+      - "9864:9864"
       depends_on:
         - namenode
       env_file:
         - ./hadoop.env
   
+  flask:
+    image: flask-api:latest
+    container_name: flask
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - API_KEY=bigdata2024secret
+      
   mongodb:
     image: mongo:6
     container_name: mongodb
@@ -75,10 +90,10 @@ services:
       image: jupyter/pyspark-notebook
       ports:
         - "8888:8888"
-      volumes:
-        - .:/home/jovyan/intrusion-detection-bigdata
-        - /e/Intrusion_data:/home/jovyan/intrusion_data
+      # volumes:
+      #   - .:/home/jovyan/intrusion-detection-bigdata
+      #   - /e/Intrusion_data:/home/jovyan/intrusion_data
 
-volumes:
-  mongo_data:
+# volumes:
+#   mongo_data:
 

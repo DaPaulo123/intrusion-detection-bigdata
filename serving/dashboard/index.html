@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>UI for testing</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .card-header {
+            border-left: 4px solid white;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .card {
+            margin-bottom: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .card-body {
+            padding: 10px;
+            background-color: #16213e;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="realtime-banner">
+        <h1> Network Threat Detection </h1>
+        <p id="last-updated"></p>
+    </div>
+    <div id="main-content" style="display: flex; gap: 20px;">
+        <div id="recent-alerts-summary" style="flex: 2;">
+        
+        </div>
+        <div id="attack-summary" style="flex: 1;">
+            Latest Attacks Summary
+        </div>
+    </div>
+    <div id='attacktype-breakdown'>
+        attack type breakdown
+    </div>
+    <script>
+        function fetchAlerts() {
+            fetch("http://localhost:5000/alerts", {
+                headers: {
+                    "X-API-Key": "bigdata2024secret"
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    let html = ""
+                    const visible = data.filter(alert => alert.status !== "resolved" && alert.status !== "false_positive")
+                    visible.forEach(alert => {
+                        const icon = getIcon(alert.attack_cat)
+                        const color = getColor(alert.status)
+                        const label = getConfidenceLabel(alert.confidence)
+                        html += `
+                            <div class="card">
+                                <div class="card-header" style="background-color: ${color}">
+                                    ${icon} ${alert.attack_cat}
+                                </div>
+                                <div class="card-body">
+                                    <p>Confidence: ${label} (${alert.confidence})</p>
+                                    <p>Source: ${alert.srcip}</p>
+                                    <p>Time: ${alert.timestamp}</p>
+                                    <p>Status: ${alert.status}</p>
+                                    <button onclick="updateStatus('${alert._id}', 'confirmed')">Confirm</button>
+                                    <button onclick="updateStatus('${alert._id}', 'resolved')">Resolve</button>
+                                    <button onclick="updateStatus('${alert._id}', 'false_positive')">False Positive</button>
+                                </div>  
+                            </div>
+                        `
+                    })
+                    document.getElementById("recent-alerts-summary").innerHTML = html
+                    document.getElementById("last-updated").innerHTML = "Last updated: " + new Date().toLocaleTimeString()
+                })
+        }
+        function updateStatus(alert_id, status){
+            fetch(`http://localhost:5000/alerts/${alert_id}/status`,{
+                method: "PUT",
+                headers: {
+                    "Content-Type" : "application/json",
+                    "X-API-Key": "bigdata2024secret"
+                },
+                body: JSON.stringify({status: status})
+            }).then(() => fetchAlerts())
+    }
+        fetchAlerts()
+        setInterval(fetchAlerts, 5000)
+        function getIcon(attack_cat){
+            const icons = {
+                "DoS" : "🔥",
+                "Exploits": "💉",
+                "Backdoors": "🚪",
+                "Reconnaissance": "👁️",
+                "Shellcode": "💻",
+                "Worm": "🐛",
+                "Fuzzers": "🌀",
+                "Analysis": "🔍",
+            }
+            return icons[attack_cat] || "⚠️"
+        }
+        function getColor(status){
+            const stat = {
+                "Unverified": "red",
+                "confirmed": "orange",
+                "resolved": "green"
+            }
+            return stat[status]
+        }
+        function getConfidenceLabel(confidence){
+            if (confidence >= 0.8){
+                return "High"
+            }
+            else if(confidence >=0.5){
+                return "Medium"
+            }
+            else return "Low"
+        }
+    </script>
+</body>
+
+</html>

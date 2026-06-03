@@ -7,37 +7,42 @@ nhat quan trong quy trinh xu ly du lieu.
 """
 
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col
-
+from pyspark.sql.functions import col, trim, regexp_replace, when
 
 def clean_dataframe(df: DataFrame) -> DataFrame:
     """
-    Thuc hien cac buoc tien xu ly co ban tren PySpark DataFrame:
-      1. Xoa cac dong co gia tri null (Missing values)
-      2. Xoa cot thua khong mang thong tin (id, attack_cat)
-      3. Loc nhieu trong cac cot chuoi (service, state)
-
-    Args:
-        df: PySpark DataFrame chua du lieu tho
-
-    Returns:
-        PySpark DataFrame da duoc lam sach
+    Thuc hien cac buoc tien xu ly co ban tren PySpark DataFrame giong voi notebook.
     """
-    # Buoc 1: Xu ly gia tri trong (Missing values)
-    df = df.dropna()
+    # 1. Lam sach cot attack_cat va cac cot string khac
+    string_cols = [c for c, t in df.dtypes if t == 'string']
+    
+    # Dien gia tri cho attack_cat (null hoac rong -> 'Normal')
+    if 'attack_cat' in df.columns:
+        df = df.fillna({'attack_cat': 'Normal'})
+        df = df.withColumn('attack_cat', trim(col('attack_cat')))
+        df = df.withColumn('attack_cat', regexp_replace(col('attack_cat'), 'Backdoors', 'Backdoor'))
+        df = df.withColumn('attack_cat', when(col('attack_cat') == '', 'Normal').otherwise(col('attack_cat')))
+    
+    # Dien gia tri mac dinh cho cac cot string khac de khong bi drop boi StringIndexer
+    fill_dict = {c: 'Unknown' for c in string_cols if c != 'attack_cat'}
+    if fill_dict:
+        df = df.fillna(fill_dict)
 
-    # Buoc 2: Xoa cot thua
-    # - 'id'         : Bo dem dong, khong mang y nghia ML
-    # - 'attack_cat' : Nhan da lop, gay Data Leakage khi chi lam phan loai nhi phan
-    for drop_col in ['id', 'attack_cat']:
-        if drop_col in df.columns:
-            df = df.drop(drop_col)
+    # 2. Ep kieu cho cac cot so thuc
+    numeric_cols = ["sbytes", "dbytes", "dur", "sttl", "dttl", "sloss", "dloss"]
+    for c in numeric_cols:
+        if c in df.columns:
+            df = df.withColumn(c, col(c).cast("double"))
 
-    # Buoc 3: Loc nhieu trong cac cot phan loai
-    # Thiet bi mang thuong ghi '-' hoac 'unknown' khi khong xac dinh duoc dich vu/trang thai
-    if 'service' in df.columns:
-        df = df.filter(col('service') != '-').filter(col('service') != 'unknown')
-    if 'state' in df.columns:
-        df = df.filter(col('state') != '-').filter(col('state') != 'unknown')
+    # 3. Ep kieu cho ct_ftp_cmd va is_ftp_login
+    for c in ['ct_ftp_cmd', 'is_ftp_login']:
+        if c in df.columns:
+            df = df.withColumn(c, col(c).cast("integer"))
+
+    # 4. Xoa cot thua khong mang thong tin hoac khong can thiet cho ML
+    cols_to_drop = ['srcip', 'dstip', 'sport', 'dsport', 'stcpb', 'dtcpb', 'Stime', 'Ltime', 'id', 'label']
+    for c in cols_to_drop:
+        if c in df.columns:
+            df = df.drop(c)
 
     return df

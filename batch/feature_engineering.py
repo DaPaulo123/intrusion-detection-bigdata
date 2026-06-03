@@ -6,54 +6,75 @@ Cac feature moi giup mo hinh ML hoc duoc nhieu goc do hon tchu khong chi dua vao
 cac cot go san trong dataset.
 """
 
+from typing import Optional, Tuple
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, when, log1p
+from pyspark.sql.functions import col, when, avg, broadcast
 
-
-def add_network_features(df: DataFrame) -> DataFrame:
+def calculate_network_stats(df: DataFrame) -> Tuple[Optional[DataFrame], Optional[DataFrame]]:
     """
-    Tao cac dac trung moi tu cac cot co san trong UNSW-NB15.
-
-    Feature moi:
-      - total_bytes    : Tong byte trao doi ca 2 chieu (sbytes + dbytes)
-      - byte_ratio     : Ti le byte chieu len / tong byte (sbytes / total_bytes)
-      - pkt_ratio      : Ti le goi tin chieu len / tong goi (spkts / (spkts+dpkts))
-      - log_duration   : Log1p cua thoi gian ket noi (xu ly gia tri skewed)
-      - is_bidirection : Co 1 neu co du lieu ca 2 chieu (sbytes>0 va dbytes>0)
-
-    Args:
-        df: PySpark DataFrame da qua buoc preprocessing
-
-    Returns:
-        PySpark DataFrame voi cac cot feature moi duoc them vao
+    Tinh toan cac gia tri thong ke trung binh tu tap TRAIN.
+    Chong Data Leakage: Chi tinh tren tap Train, roi dung ket qua nay ep vao ca Train va Test.
     """
-    # total_bytes: tong luong byte trao doi 2 chieu
-    if 'sbytes' in df.columns and 'dbytes' in df.columns:
-        df = df.withColumn('total_bytes', col('sbytes') + col('dbytes'))
-
-        # byte_ratio: ty le byte gui di so voi tong (tranh chia 0)
-        df = df.withColumn(
-            'byte_ratio',
-            when(col('total_bytes') > 0, col('sbytes') / col('total_bytes')).otherwise(0.0)
+    proto_stats = None
+    state_stat = None
+    
+    if 'proto' in df.columns:
+        proto_stats = df.groupBy("proto").agg(
+            avg("dur").alias("avg_dur_proto"),
+            avg("sbytes").alias("avg_sbytes_proto"),
+            avg("dbytes").alias("avg_dbytes_proto"),
+            avg("sload").alias("avg_sload_proto"),
+            avg("spkts").alias("avg_spkts_proto"),
+            avg("dpkts").alias("avg_dpkts_proto")
         )
-
-    # pkt_ratio: ty le goi tin gui di so voi tong goi
-    if 'spkts' in df.columns and 'dpkts' in df.columns:
-        total_pkts = col('spkts') + col('dpkts')
-        df = df.withColumn(
-            'pkt_ratio',
-            when(total_pkts > 0, col('spkts') / total_pkts).otherwise(0.0)
+        
+    if 'state' in df.columns:
+        state_stat = df.groupBy('state').agg(
+            avg('dur').alias("avg_dur_state"),
+            avg('sbytes').alias('avg_sbytes_state'),
+            avg('dbytes').alias('avg_dbytes_state'),
+            avg('sload').alias('avg_sload_state'),
+            avg('spkts').alias('avg_spkts_state'),
+            avg('dpkts').alias('avg_dpkts_state'),
         )
+        
+    return proto_stats, state_stat
 
-    # log_duration: log1p de xu ly phan phoi lech (highly skewed duration)
-    if 'dur' in df.columns:
-        df = df.withColumn('log_duration', log1p(col('dur')))
 
-    # is_bidirectional: ket noi co du lieu 2 chieu hay khong
+def apply_network_features(df: DataFrame, proto_stats: Optional[DataFrame] = None, state_stat: Optional[DataFrame] = None) -> DataFrame:
+    """
+    Ghep cac ban thong ke da hoc tu tap Train vao du lieu (Train/Test)
+    va tinh toan cac dac trung 파i sinh.
+    """
+    # 1. Tinh bytes_ratio (chi dung du lieu dong hien tai)
     if 'sbytes' in df.columns and 'dbytes' in df.columns:
         df = df.withColumn(
-            'is_bidirectional',
-            when((col('sbytes') > 0) & (col('dbytes') > 0), 1).otherwise(0)
+            'bytes_ratio',
+            when(col('dbytes') == 0, 0.0).otherwise(col('sbytes') / col('dbytes'))
         )
 
+    # 2. Join proto_stats
+    if proto_stats is not None and 'proto' in df.columns:
+        df = df.join(broadcast(proto_stats), on='proto', how='left')
+
+    # 3. Join state_stat
+    if state_stat is not None and 'state' in df.columns:
+        df = df.join(broadcast(state_stat), on='state', how='left')
+
+    # 4. Tinh threat_score (can co cac cot avg da join tu proto_stats)
+    if all(c in df.columns for c in ['sbytes', 'avg_sbytes_proto', 'sload', 'avg_sload_proto']):
+        from pyspark.sql.functions import abs as spark_abs
+        bytes_dev = spark_abs(col("sbytes") - col("avg_sbytes_proto")) / (col("avg_sbytes_proto") + 1)
+        load_dev = spark_abs(col("sload") - col("avg_sload_proto")) / (col("avg_sload_proto") + 1)
+        df = df.withColumn(
+            "threat_score",
+            when(
+                col("sbytes").isNull() | col("avg_sbytes_proto").isNull() | col("sload").isNull() | col("avg_sload_proto").isNull(), 
+                0.0
+            ).otherwise(bytes_dev * 0.5 + load_dev * 0.5)
+        )
+
+    # Xy ly null do join (vi du Test co 1 loai giao thuc chua tung co trong Train)
+    df = df.fillna(0.0)
+    
     return df

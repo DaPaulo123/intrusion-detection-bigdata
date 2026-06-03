@@ -90,10 +90,10 @@ services:
       image: jupyter/pyspark-notebook
       ports:
         - "8888:8888"
-      # volumes:
-      #   - .:/home/jovyan/intrusion-detection-bigdata
-      #   - /e/Intrusion_data:/home/jovyan/intrusion_data
+      volumes:
+        - .:/home/jovyan/intrusion-detection-bigdata
+        - /e/Intrusion_data:/home/jovyan/intrusion_data
 
-# volumes:
-#   mongo_data:
+volumes:
+  mongo_data:
 

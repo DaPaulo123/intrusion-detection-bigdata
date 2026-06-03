@@ -11,7 +11,7 @@ Cung cap cac ham tinh toan va in ra:
 
 from pyspark.sql import DataFrame
 from pyspark.ml.classification import RandomForestClassificationModel
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 
 def compute_metrics(predictions: DataFrame, label_col: str = 'label') -> dict:
@@ -26,14 +26,12 @@ def compute_metrics(predictions: DataFrame, label_col: str = 'label') -> dict:
         Dict chua cac chi so: accuracy, precision, recall, f1, auc_roc
     """
     mc = MulticlassClassificationEvaluator(labelCol=label_col, predictionCol='prediction')
-    bc = BinaryClassificationEvaluator(labelCol=label_col, rawPredictionCol='rawPrediction')
 
     return {
         'accuracy' : mc.setMetricName('accuracy').evaluate(predictions),
         'precision': mc.setMetricName('weightedPrecision').evaluate(predictions),
         'recall'   : mc.setMetricName('weightedRecall').evaluate(predictions),
         'f1'       : mc.setMetricName('f1').evaluate(predictions),
-        'auc_roc'  : bc.setMetricName('areaUnderROC').evaluate(predictions),
     }
 
 
@@ -41,7 +39,7 @@ def print_report(train_metrics: dict, test_metrics: dict,
                  model: RandomForestClassificationModel,
                  feature_cols: list,
                  predictions_test: DataFrame,
-                 top_n: int = 10):
+                 top_n: int = 10, label_col: str = 'label'):
     """
     In bao cao danh gia day du ra console.
 
@@ -68,7 +66,6 @@ def print_report(train_metrics: dict, test_metrics: dict,
     print('-------------------------------------------------------')
     print(f"  Precision (Test) : {test_metrics['precision'] * 100:.2f}%")
     print(f"  Recall    (Test) : {test_metrics['recall']    * 100:.2f}%")
-    print(f"  AUC-ROC   (Test) : {test_metrics['auc_roc']   * 100:.2f}%")
     print('-------------------------------------------------------')
 
     # Chuan doan Overfit
@@ -83,8 +80,8 @@ def print_report(train_metrics: dict, test_metrics: dict,
 
     # Confusion Matrix
     print('  Confusion Matrix (Test Set):')
-    predictions_test.groupBy('label', 'prediction') \
-        .count().orderBy('label', 'prediction').show()
+    predictions_test.groupBy(label_col, 'prediction') \
+        .count().orderBy(label_col, 'prediction').show(100)
 
     # Feature Importances
     print(f'  Top {top_n} Important Features:')

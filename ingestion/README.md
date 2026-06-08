@@ -22,3 +22,9 @@ Current status: In progress
 ## Insights
 
 - Java has weird ways to do such simple thing (construct new Record from existing Record)
+- Environment setting suck.
+- Windows formatting is stupid.
+
+# TODO
+
+- Complete real-world packet simulation

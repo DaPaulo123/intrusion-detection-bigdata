@@ -8,6 +8,13 @@ acks = "all"
 
 [simulation]
 # path to file csv data
-csv_sim_path = "graveyard/UNSW-NB15.csv"
+csv_sim_path = "../data/raw/UNSW-NB15-50k.csv"
 # path to csv feature file
-csv_header_path = "graveyard/NUSW-NB15_features.csv"
+csv_header_path = "../data/raw/NUSW-NB15_features.csv"
+# Network traffic topic name
+topic_name = "network_traffic"
+
+# Maybe you can use these for streaming part as a global config?
+[streaming]
+reset_checkpoint = false
+checkpoint_base = "/tmp/checkpoints"

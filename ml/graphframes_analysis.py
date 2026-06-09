@@ -112,9 +112,10 @@ if __name__ == '__main__':
         .getOrCreate()
     spark.sparkContext.setLogLevel('ERROR')
 
-    csv_path = '../data/UNSW_NB15_testing-set.csv'
-    df = spark.read.csv(csv_path, header=True, inferSchema=True)
-    df = df.dropna()
+    csv_path = '../data/UNSW-NB15_*.csv'
+    unsw_schema_ddl = "srcip STRING, sport STRING, dstip STRING, dsport STRING, proto STRING, state STRING, dur DOUBLE, sbytes INT, dbytes INT, sttl INT, dttl INT, sloss INT, dloss INT, service STRING, sload DOUBLE, dload DOUBLE, spkts INT, dpkts INT, swin INT, dwin INT, stcpb LONG, dtcpb LONG, smean INT, dmean INT, trans_depth INT, res_bdy_len INT, sjit DOUBLE, djit DOUBLE, stime INT, ltime INT, sintpkt DOUBLE, dintpkt DOUBLE, tcprtt DOUBLE, synack DOUBLE, ackdat DOUBLE, is_sm_ips_ports INT, ct_state_ttl INT, ct_flw_http_mthd INT, is_ftp_login INT, ct_ftp_cmd INT, ct_srv_src INT, ct_srv_dst INT, ct_dst_ltm INT, ct_src_ltm INT, ct_src_dport_ltm INT, ct_dst_sport_ltm INT, ct_dst_src_ltm INT, attack_cat STRING, label INT"
+    df = spark.read.schema(unsw_schema_ddl).csv(csv_path, header=False)
+    df = df.dropna(subset=['srcip', 'dstip'])
 
     print('=== IP Graph Analysis - UNSW-NB15 ===')
     analyze_top_talkers(df, top_n=10)

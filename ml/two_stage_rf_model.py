@@ -31,6 +31,8 @@ if sys.platform == 'win32':
 
 def _import_module(name: str, filepath: str):
     spec = importlib.util.spec_from_file_location(name, filepath)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load module from {filepath}")
     mod  = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -52,7 +54,7 @@ def main():
     spark.sparkContext.setLogLevel("ERROR")
 
     # Fix Windows filesystem
-    hc = spark.sparkContext._jsc.hadoopConfiguration()
+    hc = spark.sparkContext._jsc.hadoopConfiguration()  # type: ignore
     hc.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
 
     train_parquet = os.path.join(_here, '..', 'data', 'processed', 'train_cleaned.parquet')
@@ -77,7 +79,7 @@ def main():
     categorical_cols = [c for c, t in proc_train.dtypes if t == 'string' and c != 'attack_cat']
     
     # Ma hoa tat ca String thanh Index (bao gom ca label attack_cat)
-    indexers = [StringIndexer(inputCol=c, outputCol=c+'_index', handleInvalid='skip') for c in categorical_cols]
+    indexers: list = [StringIndexer(inputCol=c, outputCol=c+'_index', handleInvalid='skip') for c in categorical_cols]
     
     # Quan trong: Ma hoa attack_cat tren TOAN BO tap train de xac dinh Index cua Normal
     label_indexer = StringIndexer(inputCol="attack_cat", outputCol="attack_cat_index", handleInvalid='skip')
@@ -93,7 +95,7 @@ def main():
     feature_cols = [c for c in proc_train.columns if c not in categorical_cols and c not in ['attack_cat', 'is_attack']] + [c+'_index' for c in categorical_cols]
     assembler = VectorAssembler(inputCols=feature_cols, outputCol='features')
     
-    prep_pipeline = Pipeline(stages=indexers + [assembler])
+    prep_pipeline = Pipeline(stages=indexers + [assembler])  # type: ignore
     fitted_prep = prep_pipeline.fit(proc_train)
     
     # Data da san sang de huan luyen

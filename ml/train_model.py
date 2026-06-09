@@ -33,14 +33,14 @@ def build_preprocessing_pipeline(train_df: DataFrame, label_col: str = 'label'):
 
     # StringIndexer cho tung cot categorical
     indexers = [
-        StringIndexer(inputCol=c, outputCol=c + '_index', handleInvalid='skip')
+        StringIndexer(inputCol=c, outputCol=c + '_index', handleInvalid='keep')
         for c in categorical_cols
     ]
     
     final_label_col = label_col
     if label_is_string:
         final_label_col = label_col + '_index'
-        indexers.append(StringIndexer(inputCol=label_col, outputCol=final_label_col, handleInvalid='skip'))
+        indexers.append(StringIndexer(inputCol=label_col, outputCol=final_label_col, handleInvalid='keep'))
 
     pipeline = Pipeline(stages=indexers) # type: ignore
     fitted_pipeline = pipeline.fit(train_df)
@@ -98,14 +98,17 @@ def add_class_weights(df: DataFrame, label_col: str, weight_col: str = 'class_we
             weight_expr = weight_expr.when(F.col(label_col) == label_val, weight_val)
             
     # Neu khong khop nao (khong xay ra), cho weight = 1.0
-    weight_expr = weight_expr.otherwise(1.0)
+    if weight_expr is not None:
+        weight_expr = weight_expr.otherwise(1.0)
+    else:
+        weight_expr = F.lit(1.0)
     
     return df.withColumn(weight_col, weight_expr)
 
 
 def train_random_forest(train_data: DataFrame,
                         label_col: str = 'label',
-                        weight_col: str = None,
+                        weight_col: str | None = None,
                         num_trees: int = 50,
                         max_bins: int = 256,
                         seed: int = 42):

@@ -47,6 +47,30 @@ def update(alert_id):
     collection.update_one({"_id": ObjectId(alert_id)}, {"$set": {"status": stat}})
     return "Done"
 
+@app.route("/analytics/attack-distribution", methods=["GET"])
+def attack_distribution():
+    pipeline = [
+        {"$group": {"_id": "$attack_cat", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    results = list(collection.aggregate(pipeline))
+    for r in results:
+        r["attack_cat"] = r.pop("_id")
+    return jsonify(results)
+
+@app.route("/analytics/recent-summary", methods=["GET"])
+def recent_summary():
+    total = collection.count_documents({})
+    unverified = collection.count_documents({"status": "unverified"})
+    confirmed = collection.count_documents({"status": "confirmed"})
+    resolved = collection.count_documents({"status": "resolved"})
+    return jsonify({
+        "total": total,
+        "unverified": unverified,
+        "confirmed": confirmed,
+        "resolved": resolved
+    })
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
 

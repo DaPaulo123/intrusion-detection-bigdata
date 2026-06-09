@@ -1,0 +1,38 @@
+{
+  "stage1": {
+    "accuracy": 0.983,
+    "precision": 0.9215,
+    "recall": 0.9976,
+    "f1": 0.958,
+    "auc_roc": 0.9995,
+    "fpr": 0.0206,
+    "fnr": 0.0024,
+    "tp": 101899,
+    "fp": 8682,
+    "tn": 413015,
+    "fn": 243,
+    "n_estimators": 100,
+    "max_depth": 6,
+    "train_time_sec": 15.7
+  },
+  "stage2": {
+    "accuracy": 0.8724,
+    "macro_f1": 0.5657,
+    "weighted_f1": 0.8893,
+    "n_estimators": 200,
+    "max_depth": 8,
+    "max_samples_per_class": 5000,
+    "train_time_sec": 4.9
+  },
+  "overall": {
+    "accuracy": 0.9582,
+    "macro_f1": 0.5589,
+    "weighted_f1": 0.965
+  },
+  "model_files": {
+    "stage1_size": "519.5 KB",
+    "stage2_size": "9.7 MB"
+  },
+  "total_train_time_sec": 37.2,
+  "is_simulated": false
+}

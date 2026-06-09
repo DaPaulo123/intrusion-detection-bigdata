@@ -2,7 +2,7 @@
 preprocessing.py
 -----------------
 Module tien xu ly du lieu chung cho ca Batch Processing (Phan 2) va ML (Phan 4).
-Cac ham nay duoc goi lai tu spark_sample.py va rf_model.py de dam bao
+Cac ham nay duoc goi lai tu spark_sample.py va xgb_model.py de dam bao
 nhat quan trong quy trinh xu ly du lieu.
 """
 

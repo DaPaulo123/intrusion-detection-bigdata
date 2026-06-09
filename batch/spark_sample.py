@@ -72,8 +72,15 @@ def main():
         logging.info("--- [1/4] Doc du lieu UNSW-NB15 va chia tap Train/Test ---")
         df_raw = spark.read.schema(unsw_schema_ddl).csv(data_files, header=False)
         
-        # Chia ngau nhien 80% train, 20% test
-        df_train_raw, df_test_raw = df_raw.randomSplit([0.8, 0.2], seed=42)
+        # Thay vi randomSplit (gay rò rỉ dữ liệu do các gói tin trong cùng 1 cuộc tấn công bị chia cắt ra cả 2 tập),
+        # Chung ta phai chia tap train/test theo THOI GIAN (Chronological Split) de mo phong thuc te.
+        time_quantiles = df_raw.approxQuantile("stime", [0.8], 0.01)
+        split_time = time_quantiles[0]
+        logging.info(f"Cat tap du lieu tai thoi diem (stime threshold): {split_time}")
+        
+        from pyspark.sql.functions import col
+        df_train_raw = df_raw.filter(col("stime") <= split_time)
+        df_test_raw = df_raw.filter(col("stime") > split_time)
         
         logging.info(f"Tong so dong (TRAIN tho): {df_train_raw.count()}")
         logging.info(f"Tong so dong (TEST tho) : {df_test_raw.count()}")

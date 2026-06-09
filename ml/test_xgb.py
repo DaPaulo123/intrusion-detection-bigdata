@@ -1,5 +1,5 @@
 """
-two_stage_rf_model.py
+two_stage_xgb_model.py
 ---------------------
 Trien khai kien truc 2 giai doan (Two-stage Classification) de giai quyet
 bai toan mat can bang du lieu (Class Imbalance).
@@ -12,13 +12,12 @@ bai toan mat can bang du lieu (Class Imbalance).
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, when
 from pyspark.ml import Pipeline
-from pyspark.ml.feature import StringIndexer, VectorAssembler, IndexToString
-from pyspark.ml.classification import RandomForestClassifier
+from pyspark.ml.feature import StringIndexer, VectorAssembler
+from xgboost.spark import SparkXGBClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
 import os
 import sys
-import time
 import importlib.util
 
 # Fix cho Windows: set HADOOP_HOME tro vao thu muc chua winutils.exe
@@ -48,8 +47,8 @@ add_class_weights = _train_mod.add_class_weights
 
 def main():
     spark = SparkSession.builder \
-        .appName("UNSW-TwoStage-RF") \
-        .master("local[*]") \
+        .appName("UNSW-TwoStage-XGB") \
+        .master("local[*]").config("spark.python.worker.faulthandler.enabled", "true") \
         .getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
 
@@ -72,8 +71,8 @@ def main():
     print(">>> [2/6] Da load xong du lieu train_cleaned va test_cleaned.")
 
     # Tao cot is_attack: 0 neu Normal, 1 neu la tan cong
-    proc_train = proc_train.withColumn("is_attack", when(col("attack_cat") == "Normal", 0).otherwise(1))
-    proc_test  = proc_test.withColumn("is_attack", when(col("attack_cat") == "Normal", 0).otherwise(1))
+    proc_train = proc_train.withColumn("is_attack", when(col("attack_cat") == "Normal", 0.0).otherwise(1.0))
+    proc_test  = proc_test.withColumn("is_attack", when(col("attack_cat") == "Normal", 0.0).otherwise(1.0))
 
     print(">>> [3/6] Chuan bi Pipeline chung (Encoding & Assembling)...")
     categorical_cols = [c for c, t in proc_train.dtypes if t == 'string' and c != 'attack_cat']
@@ -103,8 +102,8 @@ def main():
     test_data = fitted_prep.transform(proc_test)
 
     print(">>> [4/6] Huan luyen Stage 1: Binary Model (Normal vs Attack)...")
-    rf_stage1 = RandomForestClassifier(labelCol="is_attack", featuresCol="features", numTrees=50, maxBins=256, seed=42)
-    model_stage1 = rf_stage1.fit(train_data)
+    xgb_stage1 = SparkXGBClassifier(label_col="is_attack", features_col="features", n_estimators=100, max_depth=6, random_state=42, num_workers=1)
+    model_stage1 = xgb_stage1.fit(train_data.limit(1000))
     
     print(">>> [5/6] Huan luyen Stage 2: Multiclass Model (Chi huan luyen tren du lieu Attack)...")
     # Loc ra cac dong la tan cong thuc su (is_attack == 1)
@@ -113,15 +112,16 @@ def main():
     # Ap dung Class Weights CHỈ CHO Stage 2 de cuu cac nhan hiem (Worms, Shellcode...)
     attack_train_weighted = add_class_weights(attack_train_data, label_col="attack_cat_index", weight_col="class_weight")
     
-    rf_stage2 = RandomForestClassifier(
-        labelCol="attack_cat_index", 
-        featuresCol="features", 
-        weightCol="class_weight", # Kich hoat TRONG SO
-        numTrees=100,             # Tang so cay cho model nay de phan loai 9 nhan tot hon
-        maxBins=256, 
-        seed=42
+    xgb_stage2 = SparkXGBClassifier(
+        label_col="attack_cat_index", 
+        features_col="features", 
+        weight_col="class_weight", # Kich hoat TRONG SO
+        n_estimators=150,             # Tang so cay cho model nay de phan loai 9 nhan tot hon
+        max_depth=6, 
+        random_state=42,
+        num_workers=1
     )
-    model_stage2 = rf_stage2.fit(attack_train_weighted)
+    model_stage2 = xgb_stage2.fit(attack_train_weighted.limit(500))
     
     print(">>> [6/6] Ghep noi va Danh gia mo hinh 2 Giai doan...")
     # Buoc 1: Du doan tren tap test voi Stage 1, xoa bot cac cot de tranh trung lap
@@ -146,7 +146,7 @@ def main():
     f1 = evaluator_f1.evaluate(final_pred)
     
     print("\n=======================================================")
-    print("      KET QUA MO HINH 2 GIAI DOAN (TWO-STAGE RF)       ")
+    print("      KET QUA MO HINH 2 GIAI DOAN (TWO-STAGE XGB)      ")
     print("=======================================================")
     print(f"  Accuracy (Test) : {acc * 100:.2f}%")
     print(f"  F1-Score (Test) : {f1 * 100:.2f}%")

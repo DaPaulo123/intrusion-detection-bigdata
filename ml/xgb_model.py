@@ -1,7 +1,7 @@
 """
-rf_model.py
+rf_model.py -> xgb_model.py
 -----------
-Entry point cua Phan 4 (Machine Learning) - Tuan 2 (PySpark MLlib).
+Entry point cua Phan 4 (Machine Learning) - Tuan 2 (XGBoost).
 Quy trinh:
   1. Doc du lieu tu ket qua cua Batch (train_cleaned.parquet, test_cleaned.parquet)
   2. Build & train pipeline: goi train_model.py
@@ -45,7 +45,7 @@ _hdfs_mod     = _import_module("hdfs_utils",     os.path.join(_batch, "hdfs_util
 
 build_preprocessing_pipeline = _train_mod.build_preprocessing_pipeline
 apply_pipeline                = _train_mod.apply_pipeline
-train_random_forest           = _train_mod.train_random_forest
+train_xgboost                 = _train_mod.train_xgboost
 add_class_weights             = _train_mod.add_class_weights
 compute_metrics               = _eval_mod.compute_metrics
 print_report                  = _eval_mod.print_report
@@ -54,7 +54,7 @@ load_parquet                  = _hdfs_mod.load_parquet
 
 def main():
     spark = SparkSession.builder \
-        .appName("UNSW-NB15-RF-Model") \
+        .appName("UNSW-NB15-XGB-Model") \
         .master("local[*]") \
         .config("spark.sql.warehouse.dir", "file:///tmp/spark-warehouse") \
         .getOrCreate()
@@ -98,14 +98,14 @@ def main():
                                    categorical_cols, label_col='attack_cat', final_label_col=final_label_col)
 
         # ---- BUOC 4: Train model ----
-        print(">>> [3/4] Xy ly Class Imbalance va Training Random Forest...")
+        print(">>> [3/4] Xu ly Class Imbalance va Training XGBoost...")
         start = time.time()
         
         # 1. Tinh va them trong so de can bang nhan hiem
         train_data_weighted = add_class_weights(train_data, label_col=final_label_col, weight_col='class_weight')
         
         # 2. Train mo hinh kem trong so
-        model = train_random_forest(train_data_weighted, label_col=final_label_col, weight_col='class_weight', num_trees=50, max_bins=256)
+        model = train_xgboost(train_data_weighted, label_col=final_label_col, weight_col='class_weight', num_trees=100, max_depth=6)
         
         print(f"         -> Hoan thanh trong {time.time() - start:.2f} giay!")
 
@@ -120,12 +120,12 @@ def main():
         print_report(train_metrics, test_metrics, model, feature_cols, pred_test, label_col=final_label_col)
 
         # ---- BUOC 6: Luu mo hinh ----
-        print(">>> [5/4] Luu Mo Hinh (Model Persistence)...")
+        print(">>> [5/5] Luu Mo Hinh (Model Persistence)...")
         model_dir = os.path.join(_here, '..', 'models')
         os.makedirs(model_dir, exist_ok=True)
         
-        pipeline_path = os.path.join(model_dir, 'rf_pipeline_saved')
-        model_path    = os.path.join(model_dir, 'rf_model_saved')
+        pipeline_path = os.path.join(model_dir, 'xgb_pipeline_saved')
+        model_path    = os.path.join(model_dir, 'xgb_model_saved')
 
         print(f"         -> Dang ghi Pipeline vao: {pipeline_path}")
         fitted_pipeline.write().overwrite().save(pipeline_path)

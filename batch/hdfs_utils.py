@@ -7,6 +7,7 @@ ma khong can quan tam den moi truong dang chay (local hay Docker cluster).
 """
 
 import os
+from typing import Optional
 from pyspark.sql import DataFrame, SparkSession
 
 
@@ -40,7 +41,7 @@ def save_parquet(df: DataFrame, path: str, overwrite: bool = True) -> bool:
         return False
 
 
-def load_parquet(spark: SparkSession, path: str) -> DataFrame:
+def load_parquet(spark: SparkSession, path: str) -> Optional[DataFrame]:
     """
     Doc du lieu Parquet tu duong dan (local hoac HDFS).
 
@@ -60,7 +61,7 @@ def load_parquet(spark: SparkSession, path: str) -> DataFrame:
         return None
 
 
-def load_csv(spark: SparkSession, path: str) -> DataFrame:
+def load_csv(spark: SparkSession, path: str) -> Optional[DataFrame]:
     """
     Doc file CSV voi header va tu dong suy kieu du lieu (inferSchema).
 

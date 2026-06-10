@@ -9,28 +9,25 @@ Phân hệ `batch` đảm nhận vai trò là bộ lọc tiền tuyến (Front-l
 Trong `spark_sample.py`, bộ dữ liệu UNSW-NB15 đi qua 4 bước xử lý liên tiếp:
 
 ### 1. Xử lý giá trị trống (Missing Values)
-- **Phương pháp**: `df.dropna()` — loại bỏ toàn bộ dòng có ít nhất 1 trường NULL.
-- **Lý do**: Bất kỳ bản ghi nào thiếu thông số sẽ gây lỗi tính toán số học (NaN propagation) trong quá trình huấn luyện ML.
+- **Phương pháp**: Điền `Normal` cho cột `attack_cat` bị trống (traffic bình thường). Điền `0` cho tất cả các cột số bị null.
+- **Lý do**: PySpark VectorAssembler sẽ văng lỗi nếu có giá trị null.
 
-### 2. Xóa cột thừa (Redundant Columns)
-- **Cột loại bỏ**: `id`, `attack_cat`
-  - `id`: Bộ đếm dòng, không mang thông tin mạng → giữ lại sẽ gây overfit.
-  - `attack_cat`: Nhãn đa lớp chi tiết → gây **Data Leakage** khi dự án chỉ thực hiện phân loại nhị phân (cột `label`).
+### 2. Xóa cột thừa & Khắc phục Data Leakage
+- **Cột loại bỏ**: `srcip`, `dstip`, `sport`, `dsport`, `stcpb`, `dtcpb`, `stime`, `ltime`, `label`.
+- **Lý do**: Xóa IP/Port để tránh overfit vào địa chỉ cụ thể. Xóa `label` vì nó tương quan 100% với `attack_cat` (chúng ta phân loại nhiều lớp theo `attack_cat`).
 
-### 3. Lọc nhiễu chuỗi (Denoising)
-- **Phương pháp**: Filter loại bỏ giá trị `"-"` và `"unknown"` ở các cột `service`, `state`.
-- **Lý do**: Thiết bị mạng ghi nhãn mơ hồ khi không nhận dạng được giao thức/dịch vụ. Giữ lại sẽ làm `StringIndexer` tạo thêm category rác.
+### 3. Xử lý nhãn và chuẩn hóa
+- **Phương pháp**: Gộp nhãn `Backdoors` thành `Backdoor`. Đưa các chuỗi Null về `Unknown`.
 
-### 4. Feature Engineering
-Tạo thêm 5 cột đặc trưng mới từ dữ liệu gốc:
+### 4. Feature Engineering (Chống Leakage)
+Tạo thêm các cột đặc trưng mới, thống kê **chỉ trên tập Train** rồi map vào cả 2 tập:
 
-| Cột mới | Công thức | Ý nghĩa |
+| Cột mới | Công thức / Tính toán | Ý nghĩa |
 |---|---|---|
-| `total_bytes` | `sbytes + dbytes` | Tổng byte trao đổi 2 chiều |
-| `byte_ratio` | `sbytes / total_bytes` | Tỷ lệ byte chiều lên |
-| `pkt_ratio` | `spkts / (spkts + dpkts)` | Tỷ lệ gói tin chiều lên |
-| `log_duration` | `log1p(dur)` | Log hóa thời gian (xử lý phân phối lệch) |
-| `is_bidirectional` | `1` nếu `sbytes>0 AND dbytes>0` | Kết nối hai chiều hay không |
+| `bytes_ratio` | `sbytes / dbytes` (hoặc 0) | Tỷ lệ byte lên/xuống |
+| `avg_*_proto` | `avg(dur, sbytes, dbytes, sload, spkts, dpkts)` | Trung bình các chỉ số theo giao thức |
+| `avg_*_state` | `avg(...)` | Trung bình các chỉ số theo trạng thái |
+| `threat_score` | Tính độ lệch so với trung bình `proto` | Điểm đánh giá nguy cơ tiềm ẩn |
 
 ---
 
@@ -93,7 +90,10 @@ Invoke-WebRequest -Uri "https://github.com/cdarlint/winutils/raw/master/hadoop-3
 ```
 intrusion-detection-bigdata/
 └── data/
-    └── UNSW_NB15_testing-set.csv   ← file này phải có (~15 MB)
+    ├── UNSW-NB15_1.csv
+    ├── UNSW-NB15_2.csv
+    ├── UNSW-NB15_3.csv
+    └── UNSW-NB15_4.csv
 ```
 
 ### Bước 4 — Chạy Batch Pipeline

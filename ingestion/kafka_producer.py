@@ -35,7 +35,7 @@ producer = KafkaProducer(
 print(f"Streaming {len(df)} packets...")
 for _, row in df.iterrows():
     producer.send("network_traffic", value=row.to_dict())
-    time.sleep(0.02) # Khoảng 50 gói / giây
+    time.sleep(0.2) # Khoảng 50 gói / giây
 
 producer.flush()
 print("Stream complete!")

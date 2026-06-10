@@ -31,5 +31,6 @@ spec:
             cpu: "100m"
           resources:
           limits:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "300m"
+---

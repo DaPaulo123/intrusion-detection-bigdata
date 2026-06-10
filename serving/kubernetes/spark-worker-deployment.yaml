@@ -24,12 +24,13 @@ spec:
         - "spark://spark-cluster-master:7077"
         env:
         - name: SPARK_WORKER_MEMORY
-          value: "2G"
+          value: "4G"
         resources:
           requests:
-            memory: "128Mi"
+            memory: "1Gi"
             cpu: "100m"
           resources:
           limits:
-            memory: "256Mi"
+            memory: "2Gi"
             cpu: "500m"
+---

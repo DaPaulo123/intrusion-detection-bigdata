@@ -108,9 +108,11 @@ def main():
     test_data = fitted_prep.transform(proc_test)
 
     print(">>> [4/6] Huan luyen Stage 1: Binary Model (Normal vs Attack)...")
-    xgb_stage1 = SparkXGBClassifier(label_col="is_attack", features_col="features", n_estimators=100, max_depth=6, random_state=42, num_workers=1)
+    xgb_stage1 = SparkXGBClassifier(label_col="is_attack", features_col="features", n_estimators=30, max_depth=3, random_state=42, num_workers=1)
     model_stage1 = xgb_stage1.fit(train_data)
     
+    train_data.cache()  # hoặc .persist()
+    train_data.count()  # trigger cache ngay, không để lazy
     print(">>> [5/6] Huan luyen Stage 2: Multiclass Model (Chi huan luyen tren du lieu Attack)...")
     # Loc ra cac dong la tan cong thuc su (is_attack == 1)
     attack_train_data = train_data.filter(col("is_attack") == 1)
@@ -140,7 +142,7 @@ def main():
         features_col="features", 
         weight_col="class_weight", # Kich hoat TRONG SO
         n_estimators=200,             # Tang so cay len 200
-        max_depth=8,                  # Tang do sau cay len 8 de bat feature phuc tap
+        max_depth=4,                  # Tang do sau cay len 8 de bat feature phuc tap
         min_child_weight=1.0,         # Giam xuong 1 de XGBoost cho phep tao nut cho nhan hiem
         random_state=42,
         num_workers=1

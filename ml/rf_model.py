@@ -5,7 +5,7 @@ Entry point cua Phan 4 (Machine Learning) - Tuan 2 (PySpark MLlib).
 Quy trinh:
   1. Doc du lieu tu ket qua cua Batch (train_cleaned.parquet, test_cleaned.parquet)
   2. Build & train pipeline: goi train_model.py
-  3. Danh gia toan dien: goi evaluate.py' 
+  3. Danh gia toan dien: goi evaluate.py
 """
 
 from pyspark.sql import SparkSession

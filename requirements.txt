@@ -1,4 +1,10 @@
 flask
 pymongo
 python-dotenv
-
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+pyarrow
+flask-cors

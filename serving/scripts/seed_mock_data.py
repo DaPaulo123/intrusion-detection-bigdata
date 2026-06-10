@@ -9,7 +9,7 @@ _here = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(os.path.dirname(_here), "backend"))
 
 try:
-    from config import Config
+    from config import Config  # type: ignore[import-not-found]
     mongo_uri = Config.MONGO_URI
     db_name = Config.DB_NAME
     alerts_col = Config.ALERTS_COLLECTION
@@ -61,6 +61,7 @@ for i in range(50):
         "threat_score": threat_score,
         "status": status,
         "resolved_by": resolved_by,
+        "source": "seed_mock",
         "timestamp": alert_time.isoformat().replace("+00:00", "Z")
     })
 
@@ -81,6 +82,7 @@ for i in range(8):
         "threat_score": threat_score,
         "status": "pending",
         "resolved_by": None,
+        "source": "seed_mock",
         "timestamp": alert_time.isoformat().replace("+00:00", "Z")
     })
 

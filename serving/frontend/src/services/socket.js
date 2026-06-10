@@ -1,49 +1,42 @@
-import { generateRandomAlert } from './mockData';
+import { io } from 'socket.io-client';
 
-const USE_MOCK = true;
+// ─── Cấu hình ──────────────────────────────────────────────────────────────
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
 
-class MockSocket {
-  constructor() {
-    this.listeners = {};
-    this.intervalId = null;
-    this.connected = false;
-  }
+/**
+ * Khởi tạo kết nối WebSocket tới Backend Flask-SocketIO.
+ * 
+ * Events lắng nghe:
+ *   - 'new_alert': Nhận alert mới khi có phát hiện xâm nhập
+ *   - 'alert_status_updated': Nhận cập nhật khi alert được xử lý
+ *   - 'connect': Kết nối thành công
+ *   - 'disconnect': Mất kết nối
+ */
+const socketService = io(SOCKET_URL, {
+  autoConnect: false,        // Không tự kết nối ngay khi import
+  reconnection: true,        // Tự reconnect khi mất kết nối
+  reconnectionAttempts: 10,  // Thử lại tối đa 10 lần
+  reconnectionDelay: 2000,   // Chờ 2 giây giữa mỗi lần thử
+  transports: ['websocket', 'polling'],  // Ưu tiên WebSocket, fallback polling
+});
 
-  on(event, callback) {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
-    }
-    this.listeners[event].push(callback);
-  }
+// ─── Event logging (chỉ trong development) ────────────────────────────────
+if (process.env.NODE_ENV === 'development') {
+  socketService.on('connect', () => {
+    console.log('🟢 [WebSocket] Đã kết nối tới Backend:', SOCKET_URL);
+  });
 
-  emit(event, data) {
-    if (this.listeners[event]) {
-      this.listeners[event].forEach(callback => callback(data));
-    }
-  }
+  socketService.on('disconnect', (reason) => {
+    console.log('🔴 [WebSocket] Mất kết nối:', reason);
+  });
 
-  connect() {
-    this.connected = true;
-    this.emit('connect');
-    
-    // Giả lập nhận cảnh báo streaming mỗi 3-7 giây
-    this.intervalId = setInterval(() => {
-      const newAlert = generateRandomAlert();
-      this.emit('new_alert', newAlert);
-    }, Math.floor(Math.random() * 4000) + 3000); 
-  }
+  socketService.on('connect_error', (error) => {
+    console.warn('⚠️ [WebSocket] Lỗi kết nối:', error.message);
+  });
 
-  disconnect() {
-    this.connected = false;
-    this.emit('disconnect');
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-    }
-  }
+  socketService.on('reconnect', (attemptNumber) => {
+    console.log(`🔄 [WebSocket] Đã reconnect thành công sau ${attemptNumber} lần thử.`);
+  });
 }
-
-// Nếu sau này kết nối backend thật, ta sẽ import { io } from 'socket.io-client' 
-// và cấu hình io('http://localhost:5000') ở đây
-const socketService = USE_MOCK ? new MockSocket() : null; // thay thế bằng io() khi dùng thật
 
 export default socketService;

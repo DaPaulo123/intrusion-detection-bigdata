@@ -85,15 +85,15 @@ const SystemHealth = () => {
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-gray-700" />
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" 
                   strokeDasharray={251.2} 
-                  strokeDashoffset={251.2 - (251.2 * modelMetrics.accuracy)} 
+                  strokeDashoffset={251.2 - (251.2 * (modelMetrics.overall?.accuracy || modelMetrics.accuracy || 0))} 
                   className="text-green-400 transition-all duration-1000" 
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-bold text-gray-100">{(modelMetrics.accuracy * 100).toFixed(1)}%</span>
+                <span className="text-xl font-bold text-gray-100">{((modelMetrics.overall?.accuracy || modelMetrics.accuracy || 0) * 100).toFixed(1)}%</span>
               </div>
             </div>
-            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">Accuracy</h4>
+            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">Overall Accuracy</h4>
           </div>
 
           <div className="flex flex-col items-center justify-center text-center p-4 rounded-xl bg-black/20 border border-white/5">
@@ -102,15 +102,15 @@ const SystemHealth = () => {
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-gray-700" />
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" 
                   strokeDasharray={251.2} 
-                  strokeDashoffset={251.2 - (251.2 * modelMetrics.precision)} 
+                  strokeDashoffset={251.2 - (251.2 * (modelMetrics.stage1?.precision || modelMetrics.precision || 0))} 
                   className="text-blue-400 transition-all duration-1000" 
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-bold text-gray-100">{(modelMetrics.precision * 100).toFixed(1)}%</span>
+                <span className="text-xl font-bold text-gray-100">{((modelMetrics.stage1?.precision || modelMetrics.precision || 0) * 100).toFixed(1)}%</span>
               </div>
             </div>
-            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">Precision</h4>
+            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">S1 Precision</h4>
           </div>
 
           <div className="flex flex-col items-center justify-center text-center p-4 rounded-xl bg-black/20 border border-white/5">
@@ -119,15 +119,15 @@ const SystemHealth = () => {
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-gray-700" />
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" 
                   strokeDasharray={251.2} 
-                  strokeDashoffset={251.2 - (251.2 * modelMetrics.recall)} 
+                  strokeDashoffset={251.2 - (251.2 * (modelMetrics.stage1?.recall || modelMetrics.recall || 0))} 
                   className="text-purple-400 transition-all duration-1000" 
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-bold text-gray-100">{(modelMetrics.recall * 100).toFixed(1)}%</span>
+                <span className="text-xl font-bold text-gray-100">{((modelMetrics.stage1?.recall || modelMetrics.recall || 0) * 100).toFixed(1)}%</span>
               </div>
             </div>
-            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">Recall</h4>
+            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">S1 Recall</h4>
           </div>
 
           <div className="flex flex-col items-center justify-center text-center p-4 rounded-xl bg-black/20 border border-white/5">
@@ -136,21 +136,21 @@ const SystemHealth = () => {
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-gray-700" />
                 <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" 
                   strokeDasharray={251.2} 
-                  strokeDashoffset={251.2 - (251.2 * modelMetrics.f1_score)} 
+                  strokeDashoffset={251.2 - (251.2 * (modelMetrics.overall?.weighted_f1 || modelMetrics.overall?.macro_f1 || modelMetrics.f1_score || 0))} 
                   className="text-yellow-400 transition-all duration-1000" 
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-bold text-gray-100">{(modelMetrics.f1_score * 100).toFixed(1)}%</span>
+                <span className="text-xl font-bold text-gray-100">{((modelMetrics.overall?.weighted_f1 || modelMetrics.overall?.macro_f1 || modelMetrics.f1_score || 0) * 100).toFixed(1)}%</span>
               </div>
             </div>
-            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">F1 Score</h4>
+            <h4 className="text-sm uppercase tracking-wider text-gray-400 font-semibold">Overall F1 Score</h4>
           </div>
 
         </div>
         
         <p className="text-right text-xs text-gray-500 mt-3 font-mono">
-          Last Model Retraining: {new Date(modelMetrics.last_trained).toLocaleString()}
+          Last Model Retraining: {modelMetrics.last_trained ? new Date(modelMetrics.last_trained).toLocaleString() : new Date().toLocaleString()}
         </p>
       </section>
 

@@ -10,15 +10,16 @@ const useSystemStore = create((set) => ({
   fetchData: async () => {
     set({ isLoading: true });
     try {
-      const [batch, health, metrics] = await Promise.all([
+      const [batchRes, healthRes, metricsRes] = await Promise.all([
         fetchBatchStats(),
         fetchSystemHealth(),
         fetchModelMetrics()
       ]);
+      // API trả về {status, data} — cần extract .data
       set({ 
-        batchStats: batch, 
-        systemHealth: health, 
-        modelMetrics: metrics, 
+        batchStats: batchRes.data || null, 
+        systemHealth: healthRes.data || null, 
+        modelMetrics: metricsRes.data || null, 
         isLoading: false 
       });
     } catch (error) {

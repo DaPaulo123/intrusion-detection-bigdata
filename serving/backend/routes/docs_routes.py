@@ -459,6 +459,124 @@ def api_docs():
                 </div>
             </div>
 
+            <!-- POST /predict -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method put">POST</span>
+                    <span class="path">/api/predict</span>
+                    <span class="description">Dự đoán 1 bản ghi traffic qua mô hình XGBoost 2 giai đoạn</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="section-title">Request Body (JSON) - 1 bản ghi network traffic</div>
+                    <pre class="json-block">{
+  "srcip": "192.168.1.105",
+  "dstip": "10.0.0.1",
+  "proto": "tcp",
+  "state": "FIN",
+  "service": "http",
+  "dur": 0.121478,
+  "sbytes": 100,
+  "dbytes": 6000,
+  "spkts": 4,
+  "dpkts": 6,
+  "sload": 300.5,
+  "dload": 500.2,
+  "threat_score": 75
+}</pre>
+                    <div class="section-title">Response mẫu (200 OK)</div>
+                    <pre class="json-block">{
+  "status": "success",
+  "data": {
+    "is_attack": true,
+    "attack_cat": "DoS",
+    "confidence": 0.9512,
+    "threat_score": 95,
+    "alert_id": "65b2a5b28d6c7028b0fde8b1"
+  }
+}</pre>
+                </div>
+            </div>
+
+            <!-- POST /predict/batch -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method put">POST</span>
+                    <span class="path">/api/predict/batch</span>
+                    <span class="description">Dự đoán hàng loạt (tối đa 100 bản ghi)</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="section-title">Request Body (JSON Array)</div>
+                    <pre class="json-block">[
+  {"srcip": "192.168.1.105", "proto": "tcp", "dur": 0.12, ...},
+  {"srcip": "10.0.0.15", "proto": "udp", "dur": 0.05, ...}
+]</pre>
+                    <div class="section-title">Response mẫu (200 OK)</div>
+                    <pre class="json-block">{
+  "status": "success",
+  "data": {
+    "total_records": 2,
+    "attacks_detected": 1,
+    "predictions": [
+      {"srcip": "192.168.1.105", "is_attack": true, "attack_cat": "DoS", "confidence": 0.95},
+      {"srcip": "10.0.0.15", "is_attack": false, "attack_cat": "Normal", "confidence": 0.88}
+    ]
+  }
+}</pre>
+                </div>
+            </div>
+
+            <!-- POST /alerts/ingest -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method put">POST</span>
+                    <span class="path">/api/alerts/ingest</span>
+                    <span class="description">Nhận kết quả từ luồng Streaming/Batch, insert trực tiếp vào MongoDB</span>
+                    <span class="auth-badge">Yêu cầu API Key</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="section-title">Request Body (1 object hoặc mảng)</div>
+                    <pre class="json-block">[
+  {
+    "srcip": "192.168.1.105",
+    "dstip": "10.0.0.1",
+    "proto": "tcp",
+    "attack_cat": "DoS",
+    "confidence": 0.95,
+    "threat_score": 92,
+    "source": "streaming"
+  }
+]</pre>
+                    <div class="section-title">Response mẫu (201 Created)</div>
+                    <pre class="json-block">{
+  "status": "success",
+  "message": "Đã lưu thành công 1 alerts.",
+  "data": {"inserted_count": 1}
+}</pre>
+                </div>
+            </div>
+
+            <!-- GET /model/status -->
+            <div class="endpoint-card">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="path">/api/model/status</span>
+                    <span class="description">Kiểm tra trạng thái sẵn sàng của mô hình ML (đã load chưa)</span>
+                </div>
+                <div class="endpoint-body">
+                    <div class="section-title">Response mẫu (200 OK)</div>
+                    <pre class="json-block">{
+  "status": "success",
+  "data": {
+    "models_loaded": true,
+    "stage1_loaded": true,
+    "stage2_loaded": true,
+    "feature_count": 50,
+    "attack_categories": ["Analysis", "Backdoor", "DoS", "Exploits", "Fuzzers", "Generic", "Reconnaissance", "Shellcode", "Worms"]
+  }
+}</pre>
+                </div>
+            </div>
+
             <!-- WebSocket Stream -->
             <div class="endpoint-card" style="border-left: 4px solid var(--accent-cyan);">
                 <div class="endpoint-header">

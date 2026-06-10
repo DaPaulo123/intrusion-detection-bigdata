@@ -1,4 +1,3 @@
-
 # Data ingestion layer
 
 Notes: Will likely to change in the future. Make sure to remove then setup again when happens.
@@ -23,4 +22,3 @@ Current status: In progress
 ## Insights
 
 - Java has weird ways to do such simple thing (construct new Record from existing Record)
-

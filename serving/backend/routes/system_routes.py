@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from datetime import datetime, timezone
 from services.docker_service import get_docker_containers
-from services.model_service import get_model_metrics
+from services.model_service import get_model_metrics, get_model_status
 from config.settings import logger
 
 system_bp = Blueprint('system_bp', __name__)

@@ -1,5 +1,7 @@
 
 
+import os
+import sys
 import json
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json, from_unixtime
@@ -9,6 +11,14 @@ from pyspark.sql.types import (
 )
 
 # ─── 1. Tạo SparkSession ───────────────────────────────────────────────────
+
+# Fix cho Windows: set HADOOP_HOME tro vao thu muc chua winutils.exe
+if sys.platform == 'win32':
+    _winutils_home = r'C:\hadoop'
+    os.environ['HADOOP_HOME'] = _winutils_home
+    _bin = _winutils_home + r'\bin'
+    if _bin not in os.environ.get('PATH', ''):
+        os.environ['PATH'] = _bin + ';' + os.environ.get('PATH', '')
 
 spark = (
     SparkSession.builder
@@ -27,14 +37,30 @@ spark = (
 spark.sparkContext.setLogLevel("WARN")
 print("✅ SparkSession created!")
 
-# ─── 2. Schema của 1 record UNSW-NB15 ─────────────────────────────────────
-# (Chỉ lấy các field cơ bản để test, sau này mở rộng)
+import pandas as pd
 
-traffic_schema = spark.read \
-    .option("header", True) \
-    .option("inferSchema", True) \
-    .csv("data/raw/UNSW-NB15.csv") \
-    .schema
+# ─── 2. Tự động đọc Schema từ file features ────────────────────────────────
+# (Lấy đúng yêu cầu của bạn: đọc file data để biết đặc trưng dataset)
+
+print("Đang quét cấu trúc file NUSW-NB15_features.csv...")
+feature_df = pd.read_csv("../data/NUSW-NB15_features.csv", encoding="cp1252")
+
+fields = []
+for _, row in feature_df.iterrows():
+    # Chuẩn hóa tên cột về chữ thường
+    col_name = str(row["Name"]).strip().lower()
+    # Chú ý: cột Type trong file CSV gốc có dấu cách thừa "Type "
+    col_type_str = str(row["Type "]).strip().lower()
+    
+    if col_type_str in ["integer", "float", "binary", "timestamp"]:
+        spark_type = DoubleType()
+    else:
+        spark_type = StringType()
+        
+    fields.append(StructField(col_name, spark_type, True))
+
+traffic_schema = StructType(fields)
+print(f"✅ Đã trích xuất thành công {len(fields)} đặc trưng!")
 
 # ─── 3. Đọc stream từ Kafka ────────────────────────────────────────────────
 
@@ -60,35 +86,48 @@ parsed_stream = (
     .select(from_json(col("raw_json"), traffic_schema).alias("data"))
     # Flatten: data.srcip → srcip
     .select("data.*")
-    # Parse timestamp string → timestamp type
-    .withColumn("event_time", from_unixtime(col("Stime").cast("long")).cast("timestamp"))
+    # Drop các trường chứa kết quả để AI tự dự đoán (chống Data Leakage)
+    .drop("attack_cat", "label")
+    # Parse timestamp string → timestamp type (nhớ dùng đúng tên 'stime' đã in thường)
+    .withColumn("event_time", from_unixtime(col("stime").cast("long")).cast("timestamp"))
 )
 
-# ─── 5. stream World query — chỉ print ra console ──────────────────────────
+# ─── 5. stream World query — Kết nối API ──────────────────────────
+
+import urllib.request
+import urllib.error
+
+API_BATCH_URL = "http://localhost:5000/api/predict/batch"
+
+def send_to_api(batch_df, batch_id):
+    records = batch_df.collect()
+    if not records: return
+    
+    payload = [row.asDict() for row in records]
+    chunk_size = 100
+    for i in range(0, len(payload), chunk_size):
+        chunk = payload[i:i + chunk_size]
+        try:
+            data = json.dumps(chunk, default=str).encode("utf-8")
+            req = urllib.request.Request(API_BATCH_URL, data=data, headers={"Content-Type": "application/json"}, method="POST")
+            response = urllib.request.urlopen(req)
+            resp_data = json.loads(response.read().decode("utf-8"))
+            if resp_data.get("status") == "success":
+                attacks = [r for r in resp_data["data"]["predictions"] if r["is_attack"]]
+                print(f"✅ [Batch {batch_id}] Gửi {len(chunk)} gói. Phát hiện {len(attacks)} tấn công!")
+        except Exception as e:
+            print(f"❌ Lỗi gửi API: {e}")
 
 stream_query = (
     parsed_stream
-    .select(
-        "event_time",
-        "srcip",
-        "dstip",
-        "proto",
-        "attack_cat",
-        "Label"
-    )
     .writeStream
-    .outputMode("append")
-    .format("console")
-    .option("truncate", False)       # không cắt bớt text dài
-    .option("numRows", 20)           # hiện 20 dòng mỗi batch
-    .option("checkpointLocation", "C:/tmp/checkpoint_stream")
-    .trigger(processingTime="5 seconds")  # xử lý mỗi 5 giây 1 lần
+    .foreachBatch(send_to_api)
+    .option("checkpointLocation", "C:/tmp/checkpoint_stream_api")
+    .trigger(processingTime="5 seconds")
     .start()
 )
 
-print("🚀 Streaming query started! Waiting for data from Kafka...")
-print("   Topic: network_traffic")
-print("   Output: console (mỗi 5 giây hiện 1 batch)")
+print("🚀 Streaming pipeline started! Forwarding data from Kafka -> SOC API...")
 print("   Nhấn Ctrl+C để dừng.\n")
 import signal
 
@@ -99,7 +138,4 @@ def shutdown_handler(signum, frame):
 
 signal.signal(signal.SIGINT, shutdown_handler)
 
-try:
-    stream_query.awaitTermination()
-except Exception:
-    pass
+stream_query.awaitTermination()

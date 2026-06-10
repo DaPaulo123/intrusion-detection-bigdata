@@ -1,59 +1,106 @@
-import { 
-  MOCK_ALERTS, 
-  MOCK_SUMMARY, 
-  MOCK_BATCH_STATS, 
-  MOCK_SYSTEM_HEALTH, 
-  MOCK_MODEL_METRICS 
-} from './mockData';
+import axios from 'axios';
 
-// Biến cờ (flag) để chuyển đổi giữa việc gọi API thật và dùng Mock Data
-// Tạm thời bật USE_MOCK = true theo yêu cầu
-const USE_MOCK = true;
+// ─── Cấu hình ──────────────────────────────────────────────────────────────
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_KEY = process.env.REACT_APP_API_KEY || 'SOC-Super-Secret-2026';
 
-// Tạo delay giả lập thời gian phản hồi của mạng (ví dụ 300ms)
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const api = axios.create({
+  baseURL: API_BASE,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+    'X-API-Key': API_KEY,
+  },
+});
 
-export const fetchAlerts = async () => {
-  if (USE_MOCK) {
-    await delay(300);
-    return MOCK_ALERTS;
+// ─── Interceptor xử lý lỗi chung ──────────────────────────────────────────
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      console.error(`[API Error] ${error.response.status}: ${error.response.data?.message || 'Unknown error'}`);
+    } else if (error.request) {
+      console.error('[API Error] Không thể kết nối tới Backend. Server có đang chạy không?');
+    }
+    return Promise.reject(error);
   }
-  // Code gọi API thật bằng axios sau này sẽ để ở đây
-  // const response = await axios.get('/api/alerts');
-  // return response.data.data;
+);
+
+// ─── API Functions ─────────────────────────────────────────────────────────
+
+/**
+ * Lấy danh sách alerts (có phân trang)
+ * @param {number} page - Trang hiện tại
+ * @param {number} limit - Số bản ghi/trang
+ * @param {string} [status] - Lọc theo trạng thái ('pending' | 'handled')
+ */
+export const fetchAlerts = async (page = 1, limit = 20, status = null) => {
+  const params = { page, limit };
+  if (status) params.status = status;
+  const response = await api.get('/alerts', { params });
+  return response.data;
 };
 
+/**
+ * Lấy thống kê tổng quan alerts (category, recent 10m, pending count)
+ */
 export const fetchAlertSummary = async () => {
-  if (USE_MOCK) {
-    await delay(300);
-    return MOCK_SUMMARY;
-  }
+  const response = await api.get('/alerts/summary');
+  return response.data;
 };
 
-export const updateAlertStatus = async (id, newStatus) => {
-  if (USE_MOCK) {
-    await delay(500); // Giả lập thời gian update
-    return { success: true, id, status: newStatus };
-  }
+/**
+ * Cập nhật trạng thái xử lý của một alert
+ * @param {string} id - Alert ID
+ * @param {string} newStatus - 'pending' | 'handled'
+ * @param {string} resolvedBy - Tên người xử lý
+ */
+export const updateAlertStatus = async (id, newStatus, resolvedBy = 'Admin SOC') => {
+  const response = await api.put(`/alerts/${id}/status`, {
+    status: newStatus,
+    resolved_by: resolvedBy,
+  });
+  return response.data;
 };
 
+/**
+ * Lấy thống kê Batch Processing (peak hours, threat distribution, ...)
+ */
 export const fetchBatchStats = async () => {
-  if (USE_MOCK) {
-    await delay(400);
-    return MOCK_BATCH_STATS;
-  }
+  const response = await api.get('/batch/stats');
+  return response.data;
 };
 
+/**
+ * Lấy trạng thái các Docker containers
+ */
 export const fetchSystemHealth = async () => {
-  if (USE_MOCK) {
-    await delay(200);
-    return MOCK_SYSTEM_HEALTH;
-  }
+  const response = await api.get('/system/health');
+  return response.data;
 };
 
+/**
+ * Lấy chỉ số hiệu năng mô hình ML (accuracy, f1, ...)
+ */
 export const fetchModelMetrics = async () => {
-  if (USE_MOCK) {
-    await delay(200);
-    return MOCK_MODEL_METRICS;
-  }
+  const response = await api.get('/system/model-metrics');
+  return response.data;
 };
+
+/**
+ * Lấy trạng thái load model (model có sẵn sàng chưa)
+ */
+export const fetchModelStatus = async () => {
+  const response = await api.get('/model/status');
+  return response.data;
+};
+
+/**
+ * Kiểm tra backend đang sống hay không
+ */
+export const fetchHealth = async () => {
+  const response = await api.get('/health');
+  return response.data;
+};
+
+export default api;

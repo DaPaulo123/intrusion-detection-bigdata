@@ -6,36 +6,34 @@ import PieChartAlerts from '../components/charts/PieChartAlerts';
 import AlertTable from '../components/AlertTable';
 
 const Dashboard = () => {
-  const { alerts, isLoading, markAsHandled } = useAlertStore();
+  const { alerts, summary, isLoading, markAsHandled } = useAlertStore();
 
-  // Tính toán dữ liệu thống kê từ alerts realtime
+  // Tính toán dữ liệu thống kê từ alerts realtime & summary backend
   const stats = useMemo(() => {
-    const total = alerts.length;
-    const pending = alerts.filter(a => a.status === 'pending').length;
+    // Nếu có summary từ backend, ưu tiên hiển thị số thực tế
+    const total = summary ? Object.values(summary.category_summary || {}).reduce((a, b) => a + b, 0) : alerts.length;
+    const pending = summary ? summary.pending_alerts_count : alerts.filter(a => a.status === 'pending').length;
     const handled = total - pending;
     
     // Phân nhóm theo loại tấn công (Khởi tạo sẵn 10 nhóm để luôn hiện đủ Legend)
     const categoryCount = {
-      "Normal": 0,
-      "Analysis": 0,
-      "Backdoor": 0,
-      "DoS": 0,
-      "Exploits": 0,
-      "Fuzzers": 0,
-      "Generic": 0,
-      "Reconnaissance": 0,
-      "Shellcode": 0,
-      "Worms": 0
+      "Normal": 0, "Analysis": 0, "Backdoor": 0, "DoS": 0, "Exploits": 0, 
+      "Fuzzers": 0, "Generic": 0, "Reconnaissance": 0, "Shellcode": 0, "Worms": 0
     };
 
-    alerts.forEach(a => {
-      // Bao gồm cả Normal nếu có trong luồng dữ liệu để đủ 10 hình thức phân loại
-      if (categoryCount[a.attack_cat] !== undefined) {
-        categoryCount[a.attack_cat]++;
-      } else {
-        categoryCount[a.attack_cat] = 1;
-      }
-    });
+    if (summary && summary.category_summary) {
+      Object.keys(summary.category_summary).forEach(key => {
+        categoryCount[key] = summary.category_summary[key];
+      });
+    } else {
+      alerts.forEach(a => {
+        if (categoryCount[a.attack_cat] !== undefined) {
+          categoryCount[a.attack_cat]++;
+        } else {
+          categoryCount[a.attack_cat] = 1;
+        }
+      });
+    }
     
     const pieData = Object.keys(categoryCount).map(key => ({
       name: key,
@@ -43,7 +41,7 @@ const Dashboard = () => {
     })).sort((a, b) => b.value - a.value);
 
     return { total, pending, handled, pieData };
-  }, [alerts]);
+  }, [alerts, summary]);
 
   if (isLoading && alerts.length === 0) {
     return (

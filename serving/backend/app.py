@@ -14,6 +14,8 @@ from routes.alert_routes import alert_bp
 from routes.system_routes import system_bp
 from routes.batch_routes import batch_bp
 from routes.docs_routes import docs_bp
+from routes.predict_routes import predict_bp
+from routes.ingest_routes import ingest_bp
 
 def create_app():
     app = Flask(__name__)
@@ -40,6 +42,8 @@ def create_app():
     app.register_blueprint(system_bp, url_prefix="/api")
     app.register_blueprint(batch_bp, url_prefix="/api")
     app.register_blueprint(docs_bp, url_prefix="/api")
+    app.register_blueprint(predict_bp, url_prefix="/api")
+    app.register_blueprint(ingest_bp, url_prefix="/api")
     
     return app
 
@@ -49,6 +53,11 @@ last_seen_id = None
 stop_event = threading.Event()
 
 def monitor_mongodb_inserts():
+    """
+    Tiến trình nền giám sát MongoDB — chỉ phát WebSocket cho các alert
+    được ghi trực tiếp vào MongoDB (không thông qua API predict/ingest).
+    Các alert từ API predict/ingest đã tự emit WebSocket rồi nên bỏ qua.
+    """
     global last_seen_id
     from core.database import collection
     
@@ -75,10 +84,16 @@ def monitor_mongodb_inserts():
                 for alert in new_alerts:
                     alert["id"] = str(alert["_id"])
                     del alert["_id"]
-                    
-                    logger.info(f"[WebSockets Push] Phát hiện xâm nhập mới: {alert['attack_cat']} từ {alert['srcip']}")
-                    socketio.emit("new_alert", alert)
                     last_seen_id = ObjectId(alert["id"])
+                    
+                    # Bỏ qua các alert đã được emit từ API predict/ingest
+                    # (các route đó đã tự emit WebSocket rồi)
+                    source = alert.get("source", "")
+                    if source in ("streaming", "batch_predict", "external", "seed_mock"):
+                        continue
+                    
+                    logger.info(f"[WebSockets Push] Phát hiện xâm nhập mới: {alert.get('attack_cat', 'N/A')} từ {alert.get('srcip', 'N/A')}")
+                    socketio.emit("new_alert", alert)
             time.sleep(0.2)
         except Exception as e:
             logger.error(f"Lỗi trong tiến trình quét alerts nền: {e}")

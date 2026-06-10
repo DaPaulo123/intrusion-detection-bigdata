@@ -4,21 +4,23 @@ import os
 import pandas as pd
 import tomllib
 from kafka import KafkaProducer
-from kafka.errors import NoBrokersAvailable
 
 with open("settings.toml", mode="rb") as f:
     config = tomllib.load(f)
 
 col_info = pd.read_csv(config["simulation"]["csv_header_path"], encoding="cp1252")
-col_header = list(col_info["Name"])
+# Chuyển toàn bộ tên cột thành chữ thường để chuẩn hóa với Model AI
+col_header = [str(name).lower().strip() for name in col_info["Name"]]
 
 # Maybe add type checking here?
 df = pd.read_csv(
     config["simulation"]["csv_sim_path"],
     names=col_header,
 )
-df = df.sort_values("Stime")
 
+# Lấy toàn bộ dữ liệu file số 4 (Hơn 440,000 dòng)
+# df = df.head(50000) # Đã bỏ giới hạn
+df = df.sort_values("stime")
 
 # So far nothing yet
 producer = KafkaProducer(
@@ -32,9 +34,8 @@ producer = KafkaProducer(
 
 print(f"Streaming {len(df)} packets...")
 for _, row in df.iterrows():
-    producer.send("network_traffic", value=row.to_json())
-    time.sleep(0.01)
+    producer.send("network_traffic", value=row.to_dict())
+    time.sleep(0.02) # Khoảng 50 gói / giây
 
 producer.flush()
 print("Stream complete!")
-

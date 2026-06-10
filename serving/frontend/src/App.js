@@ -17,32 +17,47 @@ function App() {
     // Tải dữ liệu ban đầu
     fetchInitialData();
 
+    // Kết nối WebSocket (autoConnect=false nên phải gọi connect thủ công)
+    socketService.connect();
+
     // Lắng nghe Socket
-    socketService.on('new_alert', (newAlert) => {
+    let lastToastTime = 0;
+    const handleNewAlert = (newAlert) => {
       addRealtimeAlert(newAlert);
       
-      // Bắn pop-up cảnh báo đỏ khi có tấn công
-      toast.custom((t) => (
-        <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-[#111827]/90 border border-white/5 border-l-4 border-l-red-500 shadow-lg backdrop-blur-md rounded-lg pointer-events-auto flex`}>
-          <div className="flex-1 w-0 p-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 pt-0.5">
-                <ShieldAlert className="h-5 w-5 text-red-500" />
-              </div>
-              <div className="ml-3 flex-1">
-                <p className="text-sm font-medium text-gray-100">
-                  Threat Detected: <span className="text-red-400 font-semibold">{newAlert.attack_cat}</span>
-                </p>
-                <p className="mt-1 text-xs text-gray-400 font-mono">
-                  Source IP: {newAlert.srcip}
-                </p>
+      const now = Date.now();
+      if (now - lastToastTime > 2000) {
+        lastToastTime = now;
+        // Bắn pop-up cảnh báo đỏ khi có tấn công
+        toast.custom((t) => (
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-sm w-full bg-[#111827]/90 border border-white/5 border-l-4 border-l-red-500 shadow-lg backdrop-blur-md rounded-lg pointer-events-auto flex`}>
+            <div className="flex-1 w-0 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <ShieldAlert className="h-5 w-5 text-red-500" />
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-gray-100">
+                    Threat Detected: <span className="text-red-400 font-semibold">{newAlert.attack_cat}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400 font-mono">
+                    Source IP: {newAlert.srcip}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ), { duration: 4000, position: 'bottom-right' });
-    });
+        ), { id: 'attack-alert', duration: 3000, position: 'bottom-right' });
+      }
+    };
 
+    socketService.on('new_alert', handleNewAlert);
+
+    // Cleanup khi unmount: tắt listener và ngắt kết nối
+    return () => {
+      socketService.off('new_alert', handleNewAlert);
+      socketService.disconnect();
+    };
   }, [fetchInitialData, addRealtimeAlert]);
 
   return (

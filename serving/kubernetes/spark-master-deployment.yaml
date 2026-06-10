@@ -20,8 +20,6 @@ spec:
         - containerPort: 7077
         command: ["/opt/spark/bin/spark-class"]
         args: ["org.apache.spark.deploy.master.Master"]
-<<<<<<< HEAD
-=======
         resources:
           requests:
             memory: "128Mi"
@@ -30,5 +28,3 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "500m"
->>>>>>> feature/serving-layer
----

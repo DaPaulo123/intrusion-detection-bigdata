@@ -15,4 +15,3 @@ spec:
     port: 8020
     targetPort: 8020
     nodePort: 30820
-

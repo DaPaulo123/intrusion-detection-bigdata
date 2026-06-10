@@ -3,22 +3,9 @@ rf_model.py
 -----------
 Entry point cua Phan 4 (Machine Learning) - Tuan 2 (PySpark MLlib).
 Quy trinh:
-<<<<<<< HEAD
-  1. Doc du lieu tu ket qua cua Batch (train_cleaned.parquet, test_cleaned.parquet)
-  2. Build & train pipeline: goi train_model.py
-  3. Danh gia toan dien: goi evaluate.py
-=======
-<<<<<<< Updated upstream
-  1. Doc du lieu (training-set rieng neu co, fallback sang Parquet + split)
-  2. Tien xu ly: goi batch/preprocessing.py + batch/feature_engineering.py
-  3. Build & train pipeline: goi train_model.py
-  4. Danh gia toan dien: goi evaluate.py
-=======
   1. Doc du lieu tu ket qua cua Batch (train_cleaned.parquet, test_cleaned.parquet)
   2. Build & train pipeline: goi train_model.py
   3. Danh gia toan dien: goi evaluate.py' 
->>>>>>> Stashed changes
->>>>>>> feature/serving-layer
 """
 
 from pyspark.sql import SparkSession

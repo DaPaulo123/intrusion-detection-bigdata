@@ -23,6 +23,8 @@ spec:
           value: "mongodb://mongodb:27017/"
         - name: API_KEY
           value: "bigdata2024secret"
+<<<<<<< HEAD
+=======
         livenessProbe:
           httpGet:
             path: /health
@@ -43,6 +45,7 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "500m"
+>>>>>>> feature/serving-layer
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,1 @@
+{"venvPath": ".", "venv": ".venv", "reportMissingModuleSource": false, "reportMissingTypeStubs": false, "extraPaths": ["batch", "serving/backend"]}

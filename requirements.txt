@@ -1,3 +1,15 @@
 flask
 pymongo
+<<<<<<< HEAD
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+pyarrow
+flask
 python-dotenv
+flask-cors
+=======
+python-dotenv
+>>>>>>> feature/serving-layer

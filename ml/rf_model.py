@@ -3,6 +3,11 @@ rf_model.py
 -----------
 Entry point cua Phan 4 (Machine Learning) - Tuan 2 (PySpark MLlib).
 Quy trinh:
+<<<<<<< HEAD
+  1. Doc du lieu tu ket qua cua Batch (train_cleaned.parquet, test_cleaned.parquet)
+  2. Build & train pipeline: goi train_model.py
+  3. Danh gia toan dien: goi evaluate.py
+=======
 <<<<<<< Updated upstream
   1. Doc du lieu (training-set rieng neu co, fallback sang Parquet + split)
   2. Tien xu ly: goi batch/preprocessing.py + batch/feature_engineering.py
@@ -13,6 +18,7 @@ Quy trinh:
   2. Build & train pipeline: goi train_model.py
   3. Danh gia toan dien: goi evaluate.py' 
 >>>>>>> Stashed changes
+>>>>>>> feature/serving-layer
 """
 
 from pyspark.sql import SparkSession
@@ -34,6 +40,8 @@ if sys.platform == 'win32':
 def _import_module(name: str, filepath: str):
     """Load module tu duong dan tuyet doi, tranh phu thuoc sys.path."""
     spec = importlib.util.spec_from_file_location(name, filepath)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load module {name} from {filepath}")
     mod  = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -46,18 +54,14 @@ _train_mod    = _import_module("train_model",    os.path.join(_here,  "train_mod
 _eval_mod     = _import_module("evaluate",       os.path.join(_here,  "evaluate.py"))
 
 # Import tu batch/
-_prep_mod     = _import_module("preprocessing",  os.path.join(_batch, "preprocessing.py"))
-_feat_mod     = _import_module("feature_engineering", os.path.join(_batch, "feature_engineering.py"))
 _hdfs_mod     = _import_module("hdfs_utils",     os.path.join(_batch, "hdfs_utils.py"))
 
 build_preprocessing_pipeline = _train_mod.build_preprocessing_pipeline
 apply_pipeline                = _train_mod.apply_pipeline
 train_random_forest           = _train_mod.train_random_forest
+add_class_weights             = _train_mod.add_class_weights
 compute_metrics               = _eval_mod.compute_metrics
 print_report                  = _eval_mod.print_report
-clean_dataframe               = _prep_mod.clean_dataframe
-add_network_features          = _feat_mod.add_network_features
-load_csv                      = _hdfs_mod.load_csv
 load_parquet                  = _hdfs_mod.load_parquet
 
 
@@ -70,74 +74,78 @@ def main():
     spark.sparkContext.setLogLevel("ERROR")
 
     # Fix Windows: bypass winutils.exe bang LocalFileSystem
-    hc = spark.sparkContext._jsc.hadoopConfiguration()
+    hc = spark.sparkContext._jsc.hadoopConfiguration() # type: ignore
     hc.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
     hc.set("fs.file.impl.disable.cache", "true")
 
     # Su dung _here (duong dan tuyet doi toi thu muc ml/) de khong phu thuoc CWD
-    train_csv    = os.path.join(_here, '..', 'data', 'UNSW_NB15_training-set.csv')
-    test_csv     = os.path.join(_here, '..', 'data', 'UNSW_NB15_testing-set.csv')
-    parquet_path = os.path.join(_here, '..', 'data', 'processed', 'UNSW_NB15_cleaned.parquet')
+    train_parquet = os.path.join(_here, '..', 'data', 'processed', 'train_cleaned.parquet')
+    test_parquet  = os.path.join(_here, '..', 'data', 'processed', 'test_cleaned.parquet')
 
     try:
-        # ---- BUOC 1: Doc du lieu ----
-        if os.path.exists(train_csv) and os.path.exists(test_csv):
-            print(">>> [1/5] Su dung file TRAIN + TEST rieng biet (chuan UNSW-NB15 benchmark)...")
-            raw_train = load_csv(spark, train_csv)
-            raw_test  = load_csv(spark, test_csv)
-            use_split = False
-        elif os.path.exists(parquet_path):
-            print(">>> [1/5] Fallback: doc Parquet va split 80/20")
-            print("    [WARN] Chi co 1 tap du lieu -> ket qua chi mang tinh tham khao!")
-            raw_train = load_parquet(spark, parquet_path)
-            raw_test  = None
-            use_split = True
-        else:
-            print("Error: Khong tim thay du lieu. Chay batch/spark_sample.py truoc.")
+        # ---- BUOC 1 & 2: Doc du lieu da duoc Batch xu ly ----
+        print(">>> [1/4] Doc du lieu da duoc lam sach tu Batch Processing...")
+        if not os.path.exists(train_parquet) or not os.path.exists(test_parquet):
+            print(f"Error: Khong tim thay {train_parquet} hoac {test_parquet}")
+            print("Vui long chay 'python batch/spark_sample.py' truoc!")
             spark.stop()
             return
+            
+        proc_train = load_parquet(spark, train_parquet)
+        proc_test  = load_parquet(spark, test_parquet)
 
-        if raw_train is None:
-            print("Error: Khong doc duoc du lieu.")
+        if proc_train is None or proc_test is None:
+            print("Error: Khong doc duoc du lieu Parquet.")
             spark.stop()
             return
-
-        # ---- BUOC 2: Tien xu ly (dung cac module batch/) ----
-        print(">>> [2/5] Preprocessing + Feature Engineering...")
-        proc_train = add_network_features(clean_dataframe(raw_train))
-        proc_test  = add_network_features(clean_dataframe(raw_test)) if raw_test else None
-
 
         # ---- BUOC 3: Build pipeline va transform ----
-        print(">>> [3/5] Build Pipeline (StringIndexer + VectorAssembler)...")
-        feature_cols, fitted_pipeline, assembler, train_data = \
-            build_preprocessing_pipeline(proc_train)
+        print(">>> [2/4] Build Pipeline (StringIndexer + VectorAssembler) cho nhãn attack_cat...")
+        feature_cols, fitted_pipeline, assembler, train_data, final_label_col = \
+            build_preprocessing_pipeline(proc_train, label_col='attack_cat')
 
-        categorical_cols = [c for c, t in proc_train.dtypes if t == 'string' and c != 'label']
+        categorical_cols = [c for c, t in proc_train.dtypes if t == 'string' and c != 'attack_cat']
 
-        if use_split:
-            print("         -> Split 80/20 (fallback)...")
-            train_data, test_data = train_data.randomSplit([0.8, 0.2], seed=42)
-        else:
-            print("         -> Dung file test doc lap (chuan benchmark)...")
-            test_data = apply_pipeline(proc_test, fitted_pipeline, assembler,
-                                       categorical_cols)
+        print("         -> Dung tap test tu Batch de danh gia...")
+        test_data = apply_pipeline(proc_test, fitted_pipeline, assembler,
+                                   categorical_cols, label_col='attack_cat', final_label_col=final_label_col)
 
         # ---- BUOC 4: Train model ----
-        print(">>> [4/5] Training Random Forest (numTrees=50)...")
+        print(">>> [3/4] Xy ly Class Imbalance va Training Random Forest...")
         start = time.time()
-        model = train_random_forest(train_data, num_trees=50, max_bins=256)
+        
+        # 1. Tinh va them trong so de can bang nhan hiem
+        train_data_weighted = add_class_weights(train_data, label_col=final_label_col, weight_col='class_weight')
+        
+        # 2. Train mo hinh kem trong so
+        model = train_random_forest(train_data_weighted, label_col=final_label_col, weight_col='class_weight', num_trees=50, max_bins=256)
+        
         print(f"         -> Hoan thanh trong {time.time() - start:.2f} giay!")
 
         # ---- BUOC 5: Danh gia ----
-        print(">>> [5/5] Danh gia mo hinh...")
+        print(">>> [4/4] Danh gia mo hinh...")
         pred_train = model.transform(train_data)
         pred_test  = model.transform(test_data)
 
-        train_metrics = compute_metrics(pred_train)
-        test_metrics  = compute_metrics(pred_test)
+        train_metrics = compute_metrics(pred_train, label_col=final_label_col)
+        test_metrics  = compute_metrics(pred_test, label_col=final_label_col)
 
-        print_report(train_metrics, test_metrics, model, feature_cols, pred_test)
+        print_report(train_metrics, test_metrics, model, feature_cols, pred_test, label_col=final_label_col)
+
+        # ---- BUOC 6: Luu mo hinh ----
+        print(">>> [5/4] Luu Mo Hinh (Model Persistence)...")
+        model_dir = os.path.join(_here, '..', 'models')
+        os.makedirs(model_dir, exist_ok=True)
+        
+        pipeline_path = os.path.join(model_dir, 'rf_pipeline_saved')
+        model_path    = os.path.join(model_dir, 'rf_model_saved')
+
+        print(f"         -> Dang ghi Pipeline vao: {pipeline_path}")
+        fitted_pipeline.write().overwrite().save(pipeline_path)
+        
+        print(f"         -> Dang ghi Model vao:    {model_path}")
+        model.write().overwrite().save(model_path)
+        print(">>> Hoan thanh! Mo hinh da san sang cho API Serving.")
 
     except Exception as e:
         print(f"Loi: {e}")

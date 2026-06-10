@@ -22,3 +22,11 @@ spec:
           value: "hdfs://namenode:8020"
         - name: HDFS_CONF_dfs_replication
           value: "1"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          resources:
+          limits:
+            memory: "128Mi"
+            cpu: "300m"

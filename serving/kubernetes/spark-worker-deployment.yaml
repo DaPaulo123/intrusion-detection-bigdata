@@ -25,4 +25,12 @@ spec:
         env:
         - name: SPARK_WORKER_MEMORY
           value: "2G"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
 ---

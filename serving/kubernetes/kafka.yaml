@@ -40,6 +40,14 @@ spec:
           value: "1"
         - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
           value: "true"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
 
 ---
 apiVersion: v1

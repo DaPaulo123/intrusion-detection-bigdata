@@ -1,8 +1,8 @@
 """
 train_model.py
 --------------
-Module xay dung va huan luyen mo hinh PySpark MLlib.
-Tach biet logic training khoi rf_model.py de de tai su dung
+Module xay dung va huan luyen mo hinh XGBoost voi PySpark.
+Tach biet logic training khoi xgb_model.py de de tai su dung
 va thu nghiem voi cac thuat toan khac nhau.
 """
 
@@ -10,8 +10,7 @@ from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.feature import StringIndexer, VectorAssembler
-from pyspark.ml.classification import RandomForestClassifier
-
+from xgboost.spark import SparkXGBClassifier
 
 def build_preprocessing_pipeline(train_df: DataFrame, label_col: str = 'label'):
     """
@@ -33,14 +32,14 @@ def build_preprocessing_pipeline(train_df: DataFrame, label_col: str = 'label'):
 
     # StringIndexer cho tung cot categorical
     indexers = [
-        StringIndexer(inputCol=c, outputCol=c + '_index', handleInvalid='skip')
+        StringIndexer(inputCol=c, outputCol=c + '_index', handleInvalid='keep')
         for c in categorical_cols
     ]
     
     final_label_col = label_col
     if label_is_string:
         final_label_col = label_col + '_index'
-        indexers.append(StringIndexer(inputCol=label_col, outputCol=final_label_col, handleInvalid='skip'))
+        indexers.append(StringIndexer(inputCol=label_col, outputCol=final_label_col, handleInvalid='keep'))
 
     pipeline = Pipeline(stages=indexers) # type: ignore
     fitted_pipeline = pipeline.fit(train_df)
@@ -98,30 +97,35 @@ def add_class_weights(df: DataFrame, label_col: str, weight_col: str = 'class_we
             weight_expr = weight_expr.when(F.col(label_col) == label_val, weight_val)
             
     # Neu khong khop nao (khong xay ra), cho weight = 1.0
-    weight_expr = weight_expr.otherwise(1.0)
+    if weight_expr is not None:
+        weight_expr = weight_expr.otherwise(1.0)
+    else:
+        weight_expr = F.lit(1.0)
     
     return df.withColumn(weight_col, weight_expr)
 
 
-def train_random_forest(train_data: DataFrame,
-                        label_col: str = 'label',
-                        weight_col: str = None,
-                        num_trees: int = 50,
-                        max_bins: int = 256,
-                        seed: int = 42):
+def train_xgboost(train_data: DataFrame,
+                  label_col: str = 'label',
+                  weight_col: str | None = None,
+                  num_trees: int = 100,
+                  max_depth: int = 6,
+                  seed: int = 42):
     """
-    Huan luyen mo hinh Random Forest voi PySpark MLlib.
+    Huan luyen mo hinh XGBoost voi PySpark (xgboost.spark).
     Ho tro weight_col de tri Class Imbalance.
     """
-    rf = RandomForestClassifier(
-        labelCol=label_col,
-        featuresCol='features',
-        numTrees=num_trees,
-        maxBins=max_bins,
-        seed=seed
+    params: dict = dict(
+        label_col=label_col,
+        features_col='features',
+        n_estimators=num_trees,
+        max_depth=max_depth,
+        random_state=seed,
+        num_workers=1,
     )
     
     if weight_col:
-        rf.setWeightCol(weight_col)
+        params['weight_col'] = weight_col
         
-    return rf.fit(train_data)
+    xgb = SparkXGBClassifier(**params)
+    return xgb.fit(train_data)

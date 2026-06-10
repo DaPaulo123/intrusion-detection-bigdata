@@ -40,8 +40,12 @@ def main():
     parser = argparse.ArgumentParser(description="UNSW-NB15 Batch Processing Pipeline")
     _here = os.path.dirname(os.path.abspath(__file__))
     
+<<<<<<< HEAD
     parser.add_argument("--train_path", type=str, default=os.path.join(_here, '..', 'data', 'UNSW_NB15_training-set.csv'), help="Path to training CSV")
     parser.add_argument("--test_path", type=str, default=os.path.join(_here, '..', 'data', 'UNSW_NB15_testing-set.csv'), help="Path to testing CSV")
+=======
+    parser.add_argument("--data_path", type=str, default=os.path.join(_here, '..', 'data', 'UNSW-NB15_*.csv'), help="Path to full dataset CSVs (glob pattern)")
+>>>>>>> feature/ml
     parser.add_argument("--train_out", type=str, default=os.path.join(_here, '..', 'data', 'processed', 'train_cleaned.parquet'), help="Path to save processed train parquet")
     parser.add_argument("--test_out", type=str, default=os.path.join(_here, '..', 'data', 'processed', 'test_cleaned.parquet'), help="Path to save processed test parquet")
     args = parser.parse_args()
@@ -58,20 +62,46 @@ def main():
     hc.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
     hc.set("fs.file.impl.disable.cache", "true")
 
+<<<<<<< HEAD
     # Schema chuan cho UNSW-NB15 (45 cot) de tang toc do doc file thay vi inferSchema
     unsw_schema_ddl = "id INT, dur DOUBLE, proto STRING, service STRING, state STRING, spkts INT, dpkts INT, sbytes INT, dbytes INT, rate DOUBLE, sttl INT, dttl INT, sload DOUBLE, dload DOUBLE, sloss INT, dloss INT, sinpkt DOUBLE, dinpkt DOUBLE, sjit DOUBLE, djit DOUBLE, swin INT, stcpb LONG, dtcpb LONG, dwin INT, tcprtt DOUBLE, synack DOUBLE, ackdat DOUBLE, smean INT, dmean INT, trans_depth INT, response_body_len INT, ct_srv_src INT, ct_state_ttl INT, ct_dst_ltm INT, ct_src_dport_ltm INT, ct_dst_sport_ltm INT, ct_dst_src_ltm INT, is_ftp_login INT, ct_ftp_cmd INT, ct_flw_http_mthd INT, ct_src_ltm INT, ct_srv_dst INT, is_sm_ips_ports INT, attack_cat STRING, label INT"
 
     if not os.path.exists(args.train_path) or not os.path.exists(args.test_path):
         logging.error(f"Missing training or testing CSV at paths: {args.train_path}, {args.test_path}")
+=======
+    # Schema chuan cho UNSW-NB15 (49 cot) de tang toc do doc file thay vi inferSchema
+    unsw_schema_ddl = "srcip STRING, sport STRING, dstip STRING, dsport STRING, proto STRING, state STRING, dur DOUBLE, sbytes INT, dbytes INT, sttl INT, dttl INT, sloss INT, dloss INT, service STRING, sload DOUBLE, dload DOUBLE, spkts INT, dpkts INT, swin INT, dwin INT, stcpb LONG, dtcpb LONG, smean INT, dmean INT, trans_depth INT, res_bdy_len INT, sjit DOUBLE, djit DOUBLE, stime INT, ltime INT, sintpkt DOUBLE, dintpkt DOUBLE, tcprtt DOUBLE, synack DOUBLE, ackdat DOUBLE, is_sm_ips_ports INT, ct_state_ttl INT, ct_flw_http_mthd INT, is_ftp_login INT, ct_ftp_cmd INT, ct_srv_src INT, ct_srv_dst INT, ct_dst_ltm INT, ct_src_ltm INT, ct_src_dport_ltm INT, ct_dst_sport_ltm INT, ct_dst_src_ltm INT, attack_cat STRING, label INT"
+
+    import glob
+    data_files = glob.glob(args.data_path)
+    if not data_files:
+        logging.error(f"Missing dataset CSV at path: {args.data_path}")
+>>>>>>> feature/ml
         spark.stop()
         return
 
     try:
+<<<<<<< HEAD
         # ---- BUOC 1: Doc du lieu tho ----
         logging.info("--- [1/4] Doc du lieu UNSW-NB15 ---")
         # Thay vi load_csv su dung inferSchema, ta doc truc tiep de ap dung schema
         df_train_raw = spark.read.schema(unsw_schema_ddl).csv(args.train_path, header=True)
         df_test_raw  = spark.read.schema(unsw_schema_ddl).csv(args.test_path, header=True)
+=======
+        # ---- BUOC 1: Doc du lieu tho va tao tap Train/Test ----
+        logging.info("--- [1/4] Doc du lieu UNSW-NB15 va chia tap Train/Test ---")
+        df_raw = spark.read.schema(unsw_schema_ddl).csv(data_files, header=False)
+        
+        # Thay vi randomSplit (gay rò rỉ dữ liệu do các gói tin trong cùng 1 cuộc tấn công bị chia cắt ra cả 2 tập),
+        # Chung ta phai chia tap train/test theo THOI GIAN (Chronological Split) de mo phong thuc te.
+        time_quantiles = df_raw.approxQuantile("stime", [0.8], 0.01)
+        split_time = time_quantiles[0]
+        logging.info(f"Cat tap du lieu tai thoi diem (stime threshold): {split_time}")
+        
+        from pyspark.sql.functions import col
+        df_train_raw = df_raw.filter(col("stime") <= split_time)
+        df_test_raw = df_raw.filter(col("stime") > split_time)
+>>>>>>> feature/ml
         
         logging.info(f"Tong so dong (TRAIN tho): {df_train_raw.count()}")
         logging.info(f"Tong so dong (TEST tho) : {df_test_raw.count()}")

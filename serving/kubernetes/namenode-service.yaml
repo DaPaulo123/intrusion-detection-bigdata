@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
+<<<<<<< HEAD
   annotations:
     kompose.cmd: C:\Windows\system32\kompose.exe convert -f docker-compose.yml -o serving/kubernetes/ --volumes emptyDir
     kompose.version: 1.31.2 (a92241f79)
@@ -20,3 +21,19 @@ spec:
     io.kompose.service: namenode
 status:
   loadBalancer: {}
+=======
+  name: namenode
+spec:
+  selector:
+    app: namenode
+  type: NodePort
+  ports:
+  - name: web
+    port: 9870
+    targetPort: 9870
+    nodePort: 30870
+  - name: rpc
+    port: 8020
+    targetPort: 8020
+    nodePort: 30820
+>>>>>>> feature/serving-layer

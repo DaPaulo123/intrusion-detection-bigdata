@@ -21,4 +21,16 @@ spec:
         - name: CORE_CONF_fs_defaultFS
           value: "hdfs://namenode:8020"
         - name: HDFS_CONF_dfs_replication
+<<<<<<< HEAD
           value: "1"
+=======
+          value: "1"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          resources:
+          limits:
+            memory: "128Mi"
+            cpu: "300m"
+>>>>>>> feature/serving-layer

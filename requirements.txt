@@ -1,6 +1,6 @@
-kafka-python-ng
-pyspark
+flask
 pymongo
+<<<<<<< HEAD
 pandas
 numpy
 scikit-learn
@@ -10,3 +10,6 @@ pyarrow
 flask
 python-dotenv
 flask-cors
+=======
+python-dotenv
+>>>>>>> feature/serving-layer

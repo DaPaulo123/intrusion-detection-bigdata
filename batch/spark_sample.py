@@ -41,6 +41,8 @@ def main():
     _here = os.path.dirname(os.path.abspath(__file__))
     
     parser.add_argument("--data_path", type=str, default=os.path.join(_here, '..', 'data', 'UNSW-NB15_[1-3].csv'), help="Path to full dataset CSVs (glob pattern)")
+    parser.add_argument("--train_path", type=str, default=os.path.join(_here, '..', 'data', 'UNSW_NB15_training-set.csv'), help="Path to training CSV")
+    parser.add_argument("--test_path", type=str, default=os.path.join(_here, '..', 'data', 'UNSW_NB15_testing-set.csv'), help="Path to testing CSV")
     parser.add_argument("--train_out", type=str, default=os.path.join(_here, '..', 'data', 'processed', 'train_cleaned.parquet'), help="Path to save processed train parquet")
     parser.add_argument("--test_out", type=str, default=os.path.join(_here, '..', 'data', 'processed', 'test_cleaned.parquet'), help="Path to save processed test parquet")
     args = parser.parse_args()
